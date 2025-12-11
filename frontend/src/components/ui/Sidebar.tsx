@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -11,6 +12,7 @@ import {
   Box
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import {logout } from "../../redux/slices/authSlice";
 
 const MENU_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -22,6 +24,14 @@ const MENU_ITEMS = [
 
 export const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  //Función para el cierre de sesión
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   return (
     // Contenedor fijo a la izquierda
@@ -104,7 +114,10 @@ export const Sidebar = () => {
 
         {/* FOOTER (Logout) */}
         <div className="p-3 border-t border-lumina-border/50">
-            <button className="w-full flex items-center h-12 px-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors">
+            <button 
+              className="w-full flex items-center h-12 px-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+              onClick={handleLogout}
+            >
                 <LogOut className="w-6 h-6 min-w-[24px]" />
                 <AnimatePresence>
                   {isExpanded && (

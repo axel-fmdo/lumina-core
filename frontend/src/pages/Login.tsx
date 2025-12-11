@@ -7,7 +7,8 @@ import { motion } from "framer-motion";
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import api from "../lib/axios";
-import { loginSuccess } from "../redux/slices/authSlice";
+import { setToken, fetchUserProfile } from "../redux/slices/authSlice";
+import { AppDispatch } from "../redux/store";
 
 // 1. Esquema de Validación con Zod
 const loginSchema = z.object({
@@ -18,7 +19,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export const Login = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,6 @@ export const Login = () => {
     setError(null);
     
     try {
-      // Endpoint espera x-www-form-urlencoded (Estándar OAuth2 de FastAPI)
       const formData = new URLSearchParams();
       formData.append('username', data.email);
       formData.append('password', data.password);
@@ -41,10 +41,10 @@ export const Login = () => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
 
-      // Si todo sale bien:
       const token = response.data.access_token;
-      dispatch(loginSuccess({ token })); // Guardamos en Redux
-      navigate("/"); // Redirigimos al Dashboard
+      dispatch(setToken(token)); // Se guarda el token en Redux
+      await dispatch(fetchUserProfile()).unwrap(); //Se obtiene el perfil del usuario
+      navigate("/"); // Se redirige al Dashboard
 
     } catch (err: any) {
         console.error("Login Error:", err);

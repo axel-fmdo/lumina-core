@@ -1,9 +1,23 @@
 import { useEffect, useState } from "react";
 import { Bell, Search, UserCircle } from "lucide-react";
+import { usePermission } from "../../hooks/usePermission";
 
 export const Header = () => {
   // Estado para controlar la hora actual
   const [time, setTime] = useState(new Date());
+
+  //Se obtiene al usuario desde Redux
+  const { user} = usePermission();
+
+  // Se obtienen las iniciales para el avatar
+  const getInitial = (name: string) => {
+    return name
+        ?.split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2) || "U";
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 100); // Actualiza cada segundo
@@ -47,11 +61,11 @@ export const Header = () => {
         {/* Perfil Dropdown */}
         <div className="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors">
             <div className="w-8 h-8 rounded-full bg-lumina-primary flex items-center justify-center text-white font-bold text-sm">
-                AD
+                {user ? getInitial(user.full_name) : "..."}
             </div>
             <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-lumina-text leading-none">Admin User</p>
-                <p className="text-xs text-lumina-muted mt-1">Super Admin</p>
+                <p className="text-sm font-medium text-lumina-text leading-none">{user?.full_name || "Cargando..."}</p>
+                <p className="text-xs text-lumina-muted mt-1">{user?.email || "Cargando..."}</p>
             </div>
         </div>
 

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app import models
 # Importaciones del Router
-from app.routers import auth
+from app.routers import auth, users
 
 # Crear las tablas en la BD al iniciar (Solo para desarrollo)
 Base.metadata.create_all(bind=engine)
@@ -14,6 +14,7 @@ app = FastAPI(title="Lumina Asset Manager API")
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "*"
 ]
 
 app.add_middleware(
@@ -26,6 +27,9 @@ app.add_middleware(
 
 # Router de autenticación
 app.include_router(auth.router)
+
+#Router de usuarios
+app.include_router(users.router)
 
 @app.get("/")
 def read_root():

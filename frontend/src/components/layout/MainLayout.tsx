@@ -1,30 +1,37 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Sidebar } from "../ui/Sidebar";
 import { Header } from "../ui/Header";
+import { AppDispatch, RootState } from "../../redux/store";
+import { fetchUserProfile } from "../../redux/slices/authSlice";
 
 export const MainLayout = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, token } = useSelector((state: RootState) => state.auth);
+
+  // Si hay token pero no hay usuario cargado, sw busca
+  useEffect(() => {
+    if (token && !user) {
+      dispatch(fetchUserProfile());
+    }
+  }, [token, user, dispatch]);
+
+  // Se muestra un loader global mientras cargamos los permisos
+  if (token && !user) {
+     return <div className="h-screen w-full flex items-center justify-center bg-lumina-bg text-white">Cargando perfil...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-lumina-bg text-lumina-text font-sans selection:bg-lumina-primary/30">
-      
-      {/* Sidebar Fijo */}
       <Sidebar />
-
-      {/* Contenido Principal */}
       <div className="flex flex-col min-h-screen relative">
-        
-        {/* Header Superior */}
         <Header />
-
-        {/* Area de Contenido (Páginas) 
-            Se le dará un padding izquierdo (pl-20) para que no choque con el sidebar colapsado
-        */}
         <main className="flex-1 p-8 pl-24 overflow-x-hidden">
-            {/* Aquí se renderizarán las rutas hijas */}
             <div className="max-w-7xl mx-auto animate-fade-in">
                 <Outlet />
             </div>
         </main>
-
       </div>
     </div>
   );
