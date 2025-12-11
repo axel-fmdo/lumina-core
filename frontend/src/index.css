@@ -2,7 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilo base para el body */
-body {
-    @apply bg-slate-50 text-slate-900;
+@layer base {
+  body {
+    /* Aplicamos el fondo oscuro por defecto */
+    @apply bg-lumina-bg text-lumina-text antialiased selection:bg-lumina-primary selection:text-white;
+  }
+}
+
+@layer components {
+  /* Clase maestra para el efecto GLASSMORPHISM 
+     Para usar en Sidebars, Modales y Cards flotantes.
+  */
+  .glass-panel {
+    @apply bg-lumina-surface/70 backdrop-blur-md border border-lumina-border/50 shadow-xl;
+  }
+
+  /* Inputs estilizados globales */
+  .input-primary {
+    @apply bg-lumina-bg/50 border border-lumina-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lumina-primary/50 transition-all;
+  }
 }
