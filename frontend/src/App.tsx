@@ -1,40 +1,45 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { MainLayout } from "./components/layout/MainLayout";
+import { Login } from "./pages/Login";
+import { RootState } from "./redux/store";
+
+// Componente Protector: Si no hay token, te patea al login
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Todas las rutas dentro del Layout Principal */}
-        <Route element={<MainLayout />}>
-          
-          {/* Ruta Dashboard (Home) */}
-          <Route path="/" element={
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-4">Dashboard</h1>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Cards de prueba visual */}
-                <div className="h-40 glass-panel rounded-xl p-6">
-                    <h3 className="text-lumina-muted text-sm">Total Activos</h3>
-                    <p className="text-4xl font-bold text-white mt-2">1,240</p>
-                </div>
-                <div className="h-40 glass-panel rounded-xl p-6">
-                    <h3 className="text-lumina-muted text-sm">Usuarios</h3>
-                    <p className="text-4xl font-bold text-white mt-2">85</p>
-                </div>
-                <div className="h-40 glass-panel rounded-xl p-6 border-lumina-primary/30">
-                    <h3 className="text-lumina-primary text-sm font-semibold">Alertas</h3>
-                    <p className="text-4xl font-bold text-white mt-2">3</p>
-                </div>
-              </div>
-            </div>
-          } />
+        {/* Ruta Pública */}
+        <Route path="/login" element={<Login />} />
 
-          {/* Rutas Placeholder */}
-          <Route path="/assets" element={<h1>Gestión de Activos</h1>} />
-          <Route path="/users" element={<h1>Usuarios</h1>} />
-          
+        {/* Rutas Protegidas (Dashboard y demás) */}
+        <Route path="/" element={
+            <ProtectedRoute>
+                <MainLayout />
+            </ProtectedRoute>
+        }>
+            <Route index element={
+                <div className="p-4">
+                  <h1 className="text-3xl font-bold text-white">Dashboard Protegido</h1>
+                  <p className="text-lumina-muted mt-2">Bienvenido al sistema.</p>
+                </div>
+            } />
+            <Route path="users" element={<h1>Usuarios</h1>} />
+            <Route path="assets" element={<h1>Activos</h1>} />
         </Route>
+        
+        {/* Cualquier otra ruta redirige a login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
