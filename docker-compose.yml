@@ -1,0 +1,40 @@
+services:
+  # --- DATABASE ---
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=adminsys
+      - POSTGRES_PASSWORD=sysadmin123
+      - POSTGRES_DB=lumina_db
+    ports:
+      - "5432:5432"
+
+  # --- BACKEND ---
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://adminsys:sysadmin123@db:5432/lumina_db
+    depends_on:
+      - db
+
+  # --- FRONTEND ---
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
