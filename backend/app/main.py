@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.database import engine, Base
+from app import models
+
+# Crear las tablas en la BD al iniciar (Solo para desarrollo)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Lumina Asset Manager API")
 
