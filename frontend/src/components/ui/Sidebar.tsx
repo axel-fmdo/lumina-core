@@ -73,11 +73,12 @@ export const Sidebar = () => {
         </div>
 
         {/* ITEMS DEL MENU */}
-        <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
+        <nav className="flex-1 py-6 flex flex-col gap-2 px-4">
           {MENU_ITEMS.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={() => setIsExpanded(false)}
               className={({ isActive }) => cn(
                 "flex items-center h-12 px-3 rounded-lg transition-all duration-200 group relative",
                 isActive 

@@ -3,8 +3,9 @@ from app.core.database import SessionLocal
 from app import models
 from app.core.security import get_password_hash
 
-# Lista de Permisos Base del Sistema (Formato snake_case)
-INITIAL_PERMISSIONS = [
+# 1. LISTA MAESTRA DE PERMISOS
+# Definimos todos los permisos que existen en el sistema
+SYSTEM_PERMISSIONS = [
     # --- USUARIOS ---
     {"name": "Ver Usuarios", "slug": "users_read", "description": "Acceso de lectura al módulo de usuarios"},
     {"name": "Crear Usuarios", "slug": "users_create", "description": "Capacidad de registrar nuevos usuarios"},
@@ -17,65 +18,122 @@ INITIAL_PERMISSIONS = [
     {"name": "Editar Activos", "slug": "assets_update", "description": "Actualizar información o estatus de activos"},
     {"name": "Eliminar Activos", "slug": "assets_delete", "description": "Dar de baja activos del sistema"},
     
-    # --- SISTEMA / DASHBOARD ---
-    {"name": "Ver Dashboard", "slug": "dashboard_read", "description": "Acceso a las métricas principales"},
+    # --- SISTEMA ---
+    {"name": "Ver Dashboard", "slug": "dashboard_read", "description": "Acceso al panel principal"},
     {"name": "Ver Configuración", "slug": "settings_read", "description": "Acceso al módulo de configuración"},
+]
+
+# 2. CONFIGURACIÓN DE ROLES
+# Aquí definimos qué permisos (slugs) tiene cada rol
+ROLES_CONFIG = [
+    {
+        "name": "Super Admin",
+        "description": "Acceso total al sistema",
+        "permissions": ["*"] # El asterisco indica TODOS
+    },
+    {
+        "name": "IT Manager",
+        "description": "Gestión de activos e inventario",
+        "permissions": [
+            "dashboard_read",
+            "assets_read", "assets_create", "assets_update", "assets_delete",
+            "users_read"
+        ]
+    },
+    {
+        "name": "Auditor",
+        "description": "Solo lectura para revisión de inventarios",
+        "permissions": [
+            "dashboard_read",
+            "assets_read",
+            "users_read"
+        ]
+    }
+]
+
+# 3. USUARIOS DEMO INICIALES
+DEMO_USERS = [
+    {
+        "email": "admin@lumina.com",
+        "full_name": "System Administrator",
+        "password": "admin123",
+        "role": "Super Admin"
+    },
+    {
+        "email": "it@lumina.com",
+        "full_name": "Gerente de TI",
+        "password": "lumina1234",
+        "role": "IT Manager"
+    },
+    {
+        "email": "auditor@lumina.com",
+        "full_name": "Auditor Externo",
+        "password": "lumina12345",
+        "role": "Auditor"
+    }
 ]
 
 def seed_db():
     db = SessionLocal()
     try:
-        print("Iniciando sembrado de base de datos iniciales...")
+        print("Iniciando sembrado de base de datos (Demo Ready)...")
 
-        # 1. Crear Permisos
-        permissions_map = {} 
-        for perm_data in INITIAL_PERMISSIONS:
+        # --- A. CREAR PERMISOS ---
+        all_permissions_map = {} 
+        for perm_data in SYSTEM_PERMISSIONS:
             perm = db.query(models.Permission).filter_by(slug=perm_data["slug"]).first()
             if not perm:
                 perm = models.Permission(**perm_data)
                 db.add(perm)
                 print(f"   + Permiso creado: {perm_data['slug']}")
-            permissions_map[perm_data["slug"]] = perm
+            all_permissions_map[perm_data["slug"]] = perm
         
         db.commit()
 
-        # 2. Crear Rol Super Admin
-        admin_role = db.query(models.Role).filter_by(name="Super Admin").first()
-        if not admin_role:
-            admin_role = models.Role(name="Super Admin", description="Acceso total al sistema")
-            # Asignar TODOS los permisos al admin
-            for perm in permissions_map.values():
-                admin_role.permissions.append(perm)
+        # --- B. CREAR ROLES Y ASIGNAR PERMISOS ---
+        for role_conf in ROLES_CONFIG:
+            role = db.query(models.Role).filter_by(name=role_conf["name"]).first()
+            if not role:
+                role = models.Role(name=role_conf["name"], description=role_conf["description"])
+                db.add(role)
+                print(f"   + Rol creado: {role_conf['name']}")
             
-            db.add(admin_role)
-            db.commit()
-            print("   + Rol 'Super Admin' creado y permisos asignados.")
-        else:
-            # Si el rol ya existe, nos aseguramos de actualizarle los nuevos permisos si faltan
-            # Esto es útil si corres el seed varias veces
-            existing_slugs = [p.slug for p in admin_role.permissions]
-            for perm in permissions_map.values():
-                if perm.slug not in existing_slugs:
-                    admin_role.permissions.append(perm)
-                    print(f"   ^ Permiso {perm.slug} agregado al Admin existente.")
-            db.commit()
+            # Asignar permisos al rol (Limpiamos y reasignamos para asegurar consistencia)
+            role.permissions = [] # Limpiamos permisos anteriores en memoria
+            
+            if "*" in role_conf["permissions"]:
+                # Asignar TODOS
+                role.permissions = list(all_permissions_map.values())
+            else:
+                # Asignar Específicos
+                for slug in role_conf["permissions"]:
+                    if slug in all_permissions_map:
+                        role.permissions.append(all_permissions_map[slug])
+            
+            db.commit() # Guardamos la relación
 
-        # 3. Crear Usuario Admin Inicial
-        admin_email = "admin@lumina.com"
-        user = db.query(models.User).filter_by(email=admin_email).first()
-        if not user:
-            user = models.User(
-                email=admin_email,
-                full_name="System Administrator",
-                hashed_password=get_password_hash("admin123"),
-                is_active=True
-            )
-            user.roles.append(admin_role)
-            db.add(user)
-            db.commit()
-            print(f"   + Usuario Admin creado: {admin_email}")
-        else:
-            print(f"   . Usuario Admin ya existe.")
+        # --- C. CREAR USUARIOS DEMO ---
+        for user_data in DEMO_USERS:
+            user = db.query(models.User).filter_by(email=user_data["email"]).first()
+            if not user:
+                # Buscar el rol para asignarlo
+                role_obj = db.query(models.Role).filter_by(name=user_data["role"]).first()
+                if not role_obj:
+                    print(f"Error: Rol '{user_data['role']}' no encontrado para usuario {user_data['email']}")
+                    continue
+
+                new_user = models.User(
+                    email=user_data["email"],
+                    full_name=user_data["full_name"],
+                    hashed_password=get_password_hash(user_data["password"]),
+                    is_active=True
+                )
+                new_user.roles.append(role_obj)
+                db.add(new_user)
+                db.commit()
+                print(f"   + Usuario creado: {user_data['email']} ({user_data['role']})")
+            else:
+                print(f"   . Usuario existente: {user_data['email']}")
 
         print("Sembrado completado exitosamente.")
 

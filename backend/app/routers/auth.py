@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -8,7 +8,11 @@ from app.core.security import verify_password, create_access_token
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    response: Response,
+        form_data: OAuth2PasswordRequestForm = Depends(), 
+        db: Session = Depends(get_db)
+    ):
     """
     Endpoint estándar OAuth2 para obtener token.
     username: Se espera el email del usuario.
@@ -42,5 +46,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     # Guardamos el ID del usuario (sub) y sus roles/permisos en el token si quisiéramos
     # Por ahora solo el subject (email o id)
     access_token = create_access_token(data={"sub": str(user.id)})
+
+    first_name = user.full_name.split(" ")[0] if user.full_name else "Usuario"
+    response.headers["X-Process-Message"] = f"¡Bienvenido de nuevo, {first_name}!"
 
     return {"access_token": access_token, "token_type": "bearer"}

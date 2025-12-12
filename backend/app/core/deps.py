@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core import security
 from app import models
+from typing import Callable
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -38,3 +39,25 @@ def get_user_permissions(user: models.User) -> list[str]:
         for perm in role.permissions:
             permissions.add(perm.slug)
     return list(permissions)
+
+# Verificador de permisos
+class PermissionChecker:
+    def __init__(self, required_permission: str):
+        self.required_permission = required_permission
+
+    def __call__(self, user: models.User = Depends(get_current_user)):
+        # Se obtienen los permisos del usuario
+        user_permissions = get_user_permissions(user)
+        
+        # Si es Super Admin, pasa siempre (valida por el nombre)
+        is_super_admin = any(role.name == "Super Admin" for role in user.roles)
+        if is_super_admin:
+            return True
+
+        # Se busca el permiso específico
+        if self.required_permission not in user_permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"No tienes permisos para realizar esta acción. Requieres: '{self.required_permission}'"
+            )
+        return True

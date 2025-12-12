@@ -24,15 +24,19 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-lumina-bg text-lumina-text font-sans selection:bg-lumina-primary/30">
-      <Sidebar />
-      <div className="flex flex-col min-h-screen relative">
-        <Header />
-        <main className="flex-1 p-8 pl-24 overflow-x-hidden">
-            <div className="max-w-7xl mx-auto animate-fade-in">
-                <Outlet />
+        <Sidebar />
+        <div className="flex flex-col min-h-screen relative transition-all duration-300">
+            {/* Header */}
+            <div> 
+                <Header />
             </div>
-        </main>
-      </div>
+            {/* Contenido Principal */}
+            <main className="flex-1 ml-20 px-16 pt-8 pb-16 w-[calc(100%-5rem)] overflow-x-hidden">
+                <div className="w-full max-w-full mx-auto animate-fade-in">
+                    <Outlet />
+                </div>
+            </main>
+        </div>
     </div>
   );
 };

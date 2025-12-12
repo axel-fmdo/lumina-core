@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app import models
 # Importaciones del Router
-from app.routers import auth, users
+from app.routers import auth, users, roles
 
 # Crear las tablas en la BD al iniciar (Solo para desarrollo)
 Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Message"],
 )
 
 # Router de autenticación
@@ -30,6 +31,9 @@ app.include_router(auth.router)
 
 #Router de usuarios
 app.include_router(users.router)
+
+#Router de roles
+app.include_router(roles.router)
 
 @app.get("/")
 def read_root():
