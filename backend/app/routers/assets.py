@@ -14,17 +14,17 @@ router = APIRouter(
 )
 
 # Listar todos los activos registrados o con filtros (Protegido con assets_read)
-@router.get("/get_all_assets", response_model=schemas.PaginatedResponse[schemas.AssetResponse], dependencies=[Depends(PermissionChecker("assets_read"))])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.AssetResponse], dependencies=[Depends(PermissionChecker("assets_read"))])
 def read_assets(
     skip: int = 0, 
     limit: int = 10, 
     search: Optional[str] = None,
     status: Optional[models.AssetStatus] = None, # Filtro por Enum
-    category: Optional[str] = None,
+    category_id: Optional[UUID] = None,
     db: Session = Depends(get_db)
 ):
     # Se determina la consulta base
-    query = db.query(models.Asset).options(joinedload(models.Asset.assigned_to))
+    query = db.query(models.Asset).options(joinedload(models.Asset.assigned_to),joinedload(models.Asset.category))
 
     # Si hay busqueda, se filtra por nombre, referencia interna o número de serie
     if search:
@@ -37,13 +37,13 @@ def read_assets(
             )
         )
     
+    # Si hay un filtro de categoría de aplica
+    if category_id:
+        query = query.filter(models.Asset.category_id == category_id)
+    
     # Si hay in filtro de estado se aplica
     if status:
         query = query.filter(models.Asset.status == status)
-
-    # Si hay un filtro de categoría de aplica
-    if category:
-        query = query.filter(models.Asset.category == category)
 
     # Se establece el total antes de paginar
     total = query.count()
@@ -94,10 +94,16 @@ def check_asset_uniqueness(
 # Crear un Activo nuevo (Protegico con assets_create)
 @router.post("/", response_model=schemas.AssetResponse, dependencies=[Depends(PermissionChecker("assets_create"))])
 def create_asset(
+    asset: schemas.AssetCreate,
     asset_in: schemas.AssetCreate, 
     response: Response,
     db: Session = Depends(get_db)
 ):
+    # Validar que la categoría exista antes de insertar
+    category_exists = db.query(models.Category).filter(models.Category.id == asset.category_id).first()
+    if not category_exists:
+        raise HTTPException(status_code=400, detail="La categoría seleccionada no existe.")
+
     # Se valida que el Código Interno sea único
     existing_code = db.query(models.Asset).filter(models.Asset.internal_code == asset_in.internal_code).first()
     if existing_code:

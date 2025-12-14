@@ -10,7 +10,7 @@ export const useTableParams = () => {
   const limit = parseInt(searchParams.get("limit") || "10");
   const search = searchParams.get("search") || "";
   const role = searchParams.get("role") || "";
-  const category = searchParams.get("category") || "";
+  const category_id = searchParams.get("category_id") || "";
   const status = searchParams.get("status") || "";
   
   // Estado local para el input de búsqueda (para no actualizar URL en cada tecla)
@@ -64,9 +64,9 @@ export const useTableParams = () => {
   const setCategory = (newCategory: string) => {
     const params = new URLSearchParams(searchParams);
     if(newCategory){
-      params.set("category", newCategory);
+      params.set("category_id", newCategory);
     } else {
-      params.delete("category");
+      params.delete("category_id");
     }
     params.set("page", "1");
     setSearchParams(params);
@@ -93,7 +93,7 @@ export const useTableParams = () => {
     limit,
     search: searchTerm,
     role,
-    category,
+    category_id,
     status,
     setPage,
     setLimit,
@@ -107,7 +107,7 @@ export const useTableParams = () => {
         limit,
         search: debouncedSearch || undefined,
         role: role || undefined,
-        category: category || undefined,
+        category_id: category_id || undefined,
         status: status || undefined,
     }
   };

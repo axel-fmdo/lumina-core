@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app import models
 # Importaciones del Router
-from app.routers import auth, users, roles, assets
+from app.routers import auth, users, roles, assets, categories
 
 # Crear las tablas en la BD al iniciar (Solo para desarrollo)
 Base.metadata.create_all(bind=engine)
@@ -34,6 +34,9 @@ app.include_router(users.router)
 
 #Router de roles
 app.include_router(roles.router)
+
+#Router de categorías
+app.include_router(categories.router)
 
 # Router de activos
 app.include_router(assets.router)

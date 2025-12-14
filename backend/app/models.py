@@ -60,6 +60,9 @@ class User(Base):
     # Relación: Los usuarios tienen roles
     roles = relationship("Role", secondary=user_roles, backref="users")
 
+    # Relacipon: Los usuarios tienen activos
+    assigned_assets = relationship("Asset", back_populates="assigned_to")
+
 # Definición de los Estados Posibles de un Activo
 class AssetStatus(str, enum.Enum):
     AVAILABLE = "Disponible"
@@ -71,15 +74,11 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
-    # Identificación
     name = Column(String, nullable=False) # Ej: "MacBook Pro M1"
     description = Column(String, nullable=True)
     internal_code = Column(String, unique=True, index=True, nullable=False) # Ej: "LUM-001"
     serial_number = Column(String, unique=True, index=True, nullable=True)
-    
-    # Detalles
-    category = Column(String, nullable=False) # Ej: "Cómputo", "Mobiliario"
+    category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
     model = Column(String, nullable=True)
     image_url = Column(String, nullable=True) # Para foto del activo
     cost = Column(Float, nullable=True)
@@ -92,11 +91,24 @@ class Asset(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Propiedad de navegación (para acceder a asset.category.name)
+    category = relationship("Category", back_populates="assets")
+
     # --- RELACIONES ---
     
     # Relación: Un activo puede pertenecer a UN usuario (Muchos a Uno)
     assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     # Propiedad para acceder al objeto User desde el Asset (asset.assigned_to.full_name)
-    assigned_to = relationship("User", backref="assets") 
+    assigned_to = relationship("User", back_populates="assigned_assets") 
     # Nota: 'backref="assets"' crea automáticamente 'user.assets' para ver qué tiene un usuario.
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relación inversa: Una categoría tiene muchos activos
+    assets = relationship("Asset", back_populates="category")

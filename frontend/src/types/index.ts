@@ -8,6 +8,13 @@ export interface User {
   created_at?: string;
 }
 
+//Interfaz para los roles
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+}
+
 //Opciones de estado para los Activos
 export enum AssetStatus {
   AVAILABLE = "Disponible",
@@ -23,13 +30,21 @@ export interface UserSimple {
     email: string;
 }
 
+//Interfaz para las Categorías
+export interface Category {
+  id: string;
+  name: string;
+  created_at?: string;
+  // Agrega otros campos si los tienes
+}
+
 //Interfaz para los Activos
 export interface Asset {
   id: string;
   name: string;
   internal_code: string;
   serial_number?: string;
-  category: string;
+  category: Category;
   model?: string;
   cost?: number;
   description?: string;

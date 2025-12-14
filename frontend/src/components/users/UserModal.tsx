@@ -158,7 +158,7 @@ export const UserModal = ({ onClose, onSuccess, userToEdit }: UserModalProps) =>
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2}}
-                onClick={handleClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
             />
             
             <motion.div 

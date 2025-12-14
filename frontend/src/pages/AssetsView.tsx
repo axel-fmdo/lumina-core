@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Edit, ChevronDown, Box, Smartphone, Monitor, Cpu, UserPlus, UserMinus } from "lucide-react";
 import api from "../lib/axios";
 import { Asset, AssetStatus } from "../types";
+import { Category } from "../types";
 import { Table, Column } from "../components/ui/Table";
 import { usePermission } from "../hooks/usePermission";
 import { Pagination } from "../components/ui/Pagination";
@@ -25,17 +26,17 @@ const getStatusColor = (status: AssetStatus) => {
 };
 
 // Helper para iconos según categoría
-const getCategoryIcon = (category: string) => {
-    if (category.includes("Móvil")) return <Smartphone className="w-4 h-4" />;
-    if (category.includes("Monitor")) return <Monitor className="w-4 h-4" />;
+const getCategoryIcon = (category: Category) => {
+    if (category.name.includes("Móvil")) return <Smartphone className="w-4 h-4" />;
+    if (category.name.includes("Monitor")) return <Monitor className="w-4 h-4" />;
     return <Cpu className="w-4 h-4" />;
 };
 
 export const AssetsView = () => {
-    const { page, limit, search, category, status, setSearch, setCategory, setStatus, setPage, setLimit, resetFilters, apiParams } = useTableParams();
+    const { page, limit, search, category_id, status, setSearch, setCategory, setStatus, setPage, setLimit, resetFilters, apiParams } = useTableParams();
     const [assets, setAssets] = useState<Asset[]>([]);
-    //const [categories, setCategories] = useState<Category[]>([]);  //Pendiente de endpoint
-    //const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+    const [categories, setCategories] = useState<Category[]>([]);  //Pendiente de endpoint
+    const [categoriesLoaded, setCategoriesLoaded] = useState(false);
     const [totalAssets, setTotalAssets] = useState(0);
     const [loading, setLoading] = useState(true);
     const { hasPermission } = usePermission();
@@ -56,7 +57,7 @@ export const AssetsView = () => {
     const fetchAssets = async () => {
         try {
         setLoading(true);
-        const { data } = await api.get("/assets/get_all_assets", { params: apiParams});
+        const { data } = await api.get("/assets/", { params: apiParams});
         setAssets(data.data);
         setTotalAssets(data.total);
         } catch (error) {
@@ -66,19 +67,19 @@ export const AssetsView = () => {
         }
     };
 
-    /*useEffect(() => {
+    useEffect(() => {
         if (!categoriesLoaded) {
-            const response = api.get("/categories/").then((res) => setCategories(res.data));
+            const response = api.get("/categories/select").then((res) => setCategories(res.data));
 
             if(response){
                 setCategoriesLoaded(true);
             }
         }
-    }, []); */
+    }, []);
 
     useEffect(() => {
         fetchAssets();
-    }, [apiParams.skip, apiParams.limit, apiParams.search, apiParams.category, apiParams.status]);
+    }, [apiParams.skip, apiParams.limit, apiParams.search, apiParams.category_id, apiParams.status]);
 
     //Funciones para la lógica de asignación de equipos
     const openAssignModal = (asset: Asset) => {
@@ -174,7 +175,15 @@ export const AssetsView = () => {
                 </div>
             )
         },
-        { header: "Categoría", accessorKey: "category" },
+        { 
+            header: "Categoría", 
+            accessorKey: "category", 
+            render: (asset) => (
+                <span className="text-sm font-medium text-white">
+                    {asset.category.name}
+                </span>
+            )
+        },    
         {
             header: "Estado",
             render: (asset) => (
@@ -288,15 +297,14 @@ export const AssetsView = () => {
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="relative">
                             <select
-                                value={category}
+                                value={category_id}
                                 onChange={(e) => setCategory(e.target.value)}
                                 className="h-10 rounded-lg border border-lumina-border bg-lumina-bg/50 px-3 pr-9 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-lumina-primary/50 transition-all appearance-none cursor-pointer w-auto"
                             >
                                 <option value="">Todas las categorías</option>
-                                <option value="Cómputo">Cómputo</option>
-                                <option value="Periféricos">Periféricos</option>
-                                <option value="Móvil">Móvil</option>
-                                <option value="Mobiliario">Mobiliario</option>
+                                {categories.map(category => (
+                                <option key={category.id} value={category.id}>{category.name}</option>
+                            ))}
                             </select>
                             <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/70"/>
                         </div>

@@ -31,7 +31,7 @@ def read_users_me(current_user: models.User = Depends(get_current_user)):
     }
 
 # Listar a todos los usuarios o los filtrados (Protegido con 'users_read')
-@router.get("/get_all_users", response_model=schemas.PaginatedResponse[schemas.UserList], dependencies=[Depends(PermissionChecker("users_read"))])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.UserList], dependencies=[Depends(PermissionChecker("users_read"))])
 def read_users(
     skip: int = 0, 
     limit: int = 10, 

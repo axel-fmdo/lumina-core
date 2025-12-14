@@ -24,7 +24,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
             try {
                 // Pasamos el término de búsqueda al backend
                 // Si searchTerm está vacío, el backend devolverá los primeros 10 por defecto
-                const { data } = await api.get("/users/get_all_users", {
+                const { data } = await api.get("/users/", {
                     params: {
                         skip: 0,
                         limit: 10, // Traemos solo 10 resultados para ser eficientes

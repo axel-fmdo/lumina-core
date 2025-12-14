@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Edit, ChevronDown, Users } from "lucide-react";
 import api from "../lib/axios";
 import { User } from "../types";
+import { Role } from "../types";
 import { Table, Column } from "../components/ui/Table";
 import { usePermission } from "../hooks/usePermission";
 import { Pagination } from "../components/ui/Pagination";
@@ -28,7 +29,7 @@ export const UsersView = () => {
     const fetchUsers = async () => {
         try {
         setLoading(true);
-        const { data } = await api.get("/users/get_all_users", { params: apiParams});
+        const { data } = await api.get("/users/", { params: apiParams});
         setUsers(data.data);
         setTotalUsers(data.total);
         } catch (error) {
@@ -209,16 +210,19 @@ export const UsersView = () => {
             </AnimatePresence>
 
             {/* Modal para eliminar un usuario */}
-            <ConfirmModal
-                isOpen={!!userToDelete}
-                onClose={() => setUserToDelete(null)}
-                onConfirm={handleDeleteUser}
-                title="Eliminar Usuario"
-                description={`¿Estás seguro de que deseas eliminar a "${userToDelete?.full_name}"? Esta acción no se puede deshacer.`}
-                confirmText="Sí, eliminar"
-                variant="danger"
-                isLoading={isDeleting}
-            />
+            <AnimatePresence mode="wait">
+                {(!!userToDelete) && (
+                    <ConfirmModal
+                        onClose={() => setUserToDelete(null)}
+                        onConfirm={handleDeleteUser}
+                        title="Eliminar Usuario"
+                        description={`¿Estás seguro de que deseas eliminar a "${userToDelete?.full_name}"? Esta acción no se puede deshacer.`}
+                        confirmText="Sí, eliminar"
+                        variant="danger"
+                        isLoading={isDeleting}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };
