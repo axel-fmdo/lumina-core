@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 // Creamos una instancia base
 const api = axios.create({
   //baseURL: 'http://localhost:8000', // URL de tu backend
-  baseURL: 'http://192.168.0.190:8000', 
+  baseURL: 'http://192.168.0.188:8000', 
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// --- NUEVO: Interceptor de Response (Manejo de Mensajes) ---
+// Interceptor de Response (Manejo de Mensajes) ---
 api.interceptors.response.use(
     (response) => {
         // Se busca el header personalizado (Axios los pone en minúsculas)

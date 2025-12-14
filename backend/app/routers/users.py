@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.orm import Session
 from app import schemas, models
 from app.core.database import get_db
@@ -81,6 +81,30 @@ def read_users(
         "limit": limit,
         "data": results
     }
+
+@router.get("/validate-email-uniqueness", status_code=status.HTTP_200_OK)
+def check_email_uniqueness(
+    email: str, 
+    user_id: Optional[UUID] = Query(None, description="ID del usuario excluido (para edición)"),
+    db: Session = Depends(get_db)
+):
+    """Verifica si un email ya existe en la base de datos."""
+    
+    query = db.query(models.User).filter(models.User.email == email)
+    
+    if user_id:
+        # Excluir al usuario actual si estamos editando
+        query = query.filter(models.User.id != user_id)
+        
+    existing_user = query.first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=409, 
+            detail="El correo electrónico ya se encuentra registrado."
+        )
+        
+    return {"message": "Email disponible."}
 
 # Crear un usuario (Protegido con 'users_create')
 @router.post("/", response_model=schemas.UserProfile, dependencies=[Depends(PermissionChecker("users_create"))])

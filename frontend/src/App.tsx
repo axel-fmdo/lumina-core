@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Login } from "./pages/Login";
 import {UsersView} from "./pages/UsersView";
+import { AssetsView } from "./pages/AssetsView";
 import { RootState } from "./redux/store";
 import { Toaster } from "sonner";
 
@@ -45,7 +46,7 @@ function App() {
                 </div>
             } />
             <Route path="users" element={<UsersView/>} />
-            <Route path="assets" element={<h1>Activos</h1>} />
+            <Route path="assets" element={<AssetsView/>} />
         </Route>
         
         {/* Cualquier otra ruta redirige a login */}

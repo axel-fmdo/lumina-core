@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app import models
 from app.core.security import get_password_hash
+from app.models import AssetStatus
 
 # 1. LISTA MAESTRA DE PERMISOS
 # Definimos todos los permisos que existen en el sistema
@@ -73,6 +74,31 @@ DEMO_USERS = [
     }
 ]
 
+# 4. ACTIVOS DEMO
+DEMO_ASSETS = [
+    {
+        "name": "MacBook Pro M3",
+        "internal_code": "LAP-001",
+        "serial_number": "FVFD123456",
+        "category": "Cómputo",
+        "status": AssetStatus.AVAILABLE
+    },
+    {
+        "name": "Monitor Dell 27 4K",
+        "internal_code": "MON-001",
+        "serial_number": "DL-998877",
+        "category": "Periféricos",
+        "status": AssetStatus.AVAILABLE
+    },
+    {
+        "name": "iPhone 15 Pro",
+        "internal_code": "MOV-001",
+        "serial_number": "IMEI-334455",
+        "category": "Móvil",
+        "status": AssetStatus.MAINTENANCE
+    }
+]
+
 def seed_db():
     db = SessionLocal()
     try:
@@ -134,6 +160,18 @@ def seed_db():
                 print(f"   + Usuario creado: {user_data['email']} ({user_data['role']})")
             else:
                 print(f"   . Usuario existente: {user_data['email']}")
+        
+        # --- D. CREAR ACTIVOS DEMO ---
+        print("   --- Creando Activos ---")
+        for asset_data in DEMO_ASSETS:
+            asset = db.query(models.Asset).filter_by(internal_code=asset_data["internal_code"]).first()
+            if not asset:
+                new_asset = models.Asset(**asset_data)
+                db.add(new_asset)
+                db.commit()
+                print(f"   + Activo creado: {asset_data['name']}")
+            else:
+                print(f"   . Activo existente: {asset_data['name']}")
 
         print("Sembrado completado exitosamente.")
 

@@ -8,6 +8,6 @@ export const store = configureStore({
   },
 });
 
-// Tipos para usar TypeScript con Redux cómodamente
+// Tipos para usar TypeScript con Redux
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

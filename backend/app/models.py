@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Table
+import enum
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Table, Float, Enum as SqEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -58,3 +59,44 @@ class User(Base):
 
     # Relación: Los usuarios tienen roles
     roles = relationship("Role", secondary=user_roles, backref="users")
+
+# Definición de los Estados Posibles de un Activo
+class AssetStatus(str, enum.Enum):
+    AVAILABLE = "Disponible"
+    ASSIGNED = "Asignado"
+    MAINTENANCE = "En Mantenimiento"
+    RETIRED = "De Baja"
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Identificación
+    name = Column(String, nullable=False) # Ej: "MacBook Pro M1"
+    description = Column(String, nullable=True)
+    internal_code = Column(String, unique=True, index=True, nullable=False) # Ej: "LUM-001"
+    serial_number = Column(String, unique=True, index=True, nullable=True)
+    
+    # Detalles
+    category = Column(String, nullable=False) # Ej: "Cómputo", "Mobiliario"
+    model = Column(String, nullable=True)
+    image_url = Column(String, nullable=True) # Para foto del activo
+    cost = Column(Float, nullable=True)
+    
+    # Estado y Ciclo de Vida
+    status = Column(SqEnum(AssetStatus), default=AssetStatus.AVAILABLE, nullable=False)
+    acquisition_date = Column(DateTime, nullable=True)
+    
+    # Auditoría
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # --- RELACIONES ---
+    
+    # Relación: Un activo puede pertenecer a UN usuario (Muchos a Uno)
+    assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    
+    # Propiedad para acceder al objeto User desde el Asset (asset.assigned_to.full_name)
+    assigned_to = relationship("User", backref="assets") 
+    # Nota: 'backref="assets"' crea automáticamente 'user.assets' para ver qué tiene un usuario.

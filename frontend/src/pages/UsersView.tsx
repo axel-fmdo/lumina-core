@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit, ChevronDown, Users } from "lucide-react";
 import api from "../lib/axios";
 import { User } from "../types";
 import { Table, Column } from "../components/ui/Table";
@@ -7,9 +7,9 @@ import { usePermission } from "../hooks/usePermission";
 import { Pagination } from "../components/ui/Pagination";
 import { DataToolbar } from "../components/ui/DataToolbar";
 import { useTableParams } from "../hooks/useTableParams";
-import { ChevronDown } from "lucide-react";
 import { UserModal } from "../components/users/UserModal";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { AnimatePresence } from "framer-motion";
 
 export const UsersView = () => {
     const { page, limit, search, role, setSearch, setRole, setPage, setLimit, resetFilters, apiParams } = useTableParams();
@@ -135,85 +135,90 @@ export const UsersView = () => {
     ];
 
     return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Usuarios</h1>
-            <p className="text-lumina-muted">Gestiona el acceso al sistema</p>
-        </div>
-        {hasPermission('users_create') && (
-            <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-lumina-primary hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-lumina-primary/25 active:scale-95"
-            >
-                <Plus className="w-5 h-5" />
-                Nuevo Usuario
-            </button>
-        )}
-      </div>
-
-      {/* Barra de Herramientas */}
-      <DataToolbar
-        placeholder="Buscar usuarios por nombre o correo..."
-        searchTerm={search} 
-        onSearchChange={setSearch} 
-        onReset={resetFilters}
-      >
-        <div className="relative min-w-[150px]">
-            <div className="flex gap-4">
-                <div>
-                    <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        className="h-10 rounded-lg border border-lumina-border bg-lumina-bg/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-lumina-primary/50 transition-all appearance-none cursor-pointer min-w-[150px]"
-                    >
-                        <option value="">Todos los Roles</option>
-                        {roles.map(role => (
-                            <option key={role.id} value={role.name}>{role.name}</option>
-                        ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/70"/>
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-lumina-primary/10 rounded-lg">
+                        <Users className="w-6 h-6 text-lumina-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">Usuarios</h1>
+                        <p className="text-lumina-muted">Gestión de accesos al sistema</p>
+                    </div>
                 </div>
+                {hasPermission('users_create') && (
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 bg-lumina-primary hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-lumina-primary/25 active:scale-95"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Nuevo Usuario
+                    </button>
+                )}
             </div>
+
+            {/* Barra de Herramientas */}
+            <DataToolbar
+                placeholder="Buscar usuarios por nombre o correo..."
+                searchTerm={search} 
+                onSearchChange={setSearch} 
+                onReset={resetFilters}
+            >
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative">
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="h-10 rounded-lg border border-lumina-border bg-lumina-bg/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-lumina-primary/50 transition-all appearance-none cursor-pointer min-w-[150px]"
+                        >
+                            <option value="">Todos los Roles</option>
+                            {roles.map(role => (
+                                <option key={role.id} value={role.name}>{role.name}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/70"/>
+                    </div>
+                </div>
+            </DataToolbar>
+
+            <div className="flex flex-col shadow-2xl rounded-xl">
+                {/* Tabla */}
+                <Table data={users} columns={columns} isLoading={loading} />
+
+                {/* 6. Paginador */}
+                <Pagination 
+                    total={totalUsers}
+                    page={page}
+                    limit={limit}
+                    onPageChange={setPage}
+                    onLimitChange={setLimit}
+                />
+            </div>
+
+            {/* Modal para crear un usuario */}
+            <AnimatePresence mode="wait">
+                {(isCreateModalOpen || !!userToEdit) && (
+                    <UserModal
+                        onClose={closeModals}
+                        onSuccess={() => {
+                            fetchUsers(); // Recargar la tabla
+                        }}
+                        userToEdit={userToEdit}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Modal para eliminar un usuario */}
+            <ConfirmModal
+                isOpen={!!userToDelete}
+                onClose={() => setUserToDelete(null)}
+                onConfirm={handleDeleteUser}
+                title="Eliminar Usuario"
+                description={`¿Estás seguro de que deseas eliminar a "${userToDelete?.full_name}"? Esta acción no se puede deshacer.`}
+                confirmText="Sí, eliminar"
+                variant="danger"
+                isLoading={isDeleting}
+            />
         </div>
-      </DataToolbar>
-
-      <div className="flex flex-col shadow-2xl rounded-xl">
-        {/* Tabla */}
-        <Table data={users} columns={columns} isLoading={loading} />
-
-        {/* 6. Paginador */}
-        <Pagination 
-            total={totalUsers}
-            page={page}
-            limit={limit}
-            onPageChange={setPage}
-            onLimitChange={setLimit}
-        />
-      </div>
-
-      {/* Modal para crear un usuario */}
-      <UserModal 
-        isOpen={isCreateModalOpen || !!userToEdit}
-        onClose={closeModals}
-        onSuccess={() => {
-            fetchUsers(); // Recargar la tabla
-            // Aquí podríamos mostrar un Toast de éxito
-        }}
-        userToEdit={userToEdit}
-      />
-
-      {/* Modal para eliminar un usuario */}
-      <ConfirmModal
-        isOpen={!!userToDelete}
-        onClose={() => setUserToDelete(null)}
-        onConfirm={handleDeleteUser}
-        title="Eliminar Usuario"
-        description={`¿Estás seguro de que deseas eliminar a "${userToDelete?.full_name}"? Esta acción no se puede deshacer.`}
-        confirmText="Sí, eliminar"
-        variant="danger"
-        isLoading={isDeleting}
-      />
-    </div>
-  );
+    );
 };
