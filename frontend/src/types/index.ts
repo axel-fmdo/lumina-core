@@ -8,8 +8,24 @@ export interface User {
   created_at?: string;
 }
 
+//Interfaz para los permisos
+export interface Permission {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+}
+
 //Interfaz para los roles
 export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  permissions: Permission[];
+}
+
+//Interfaz para el formulario de creción base de permisos
+export interface RoleData {
   id: string;
   name: string;
   description: string;

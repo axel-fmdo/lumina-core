@@ -23,9 +23,34 @@ class PermissionBase(BaseModel):
     slug: str
     description: Optional[str] = None
 
+class PermissionResponse(PermissionBase):
+    id: UUID
+
+    class Config:
+        from_attributes = True
+
 class RoleBase(BaseModel):
     name: str
     description: Optional[str] = None
+
+class RoleCreate(RoleBase):
+    pass
+
+class RoleUpdate(RoleBase):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class RolePermissionsUpdate(BaseModel):
+    # Recibimos una lista de slugs (ej: ["users:read", "assets:create"])
+    permissions: List[str]
+
+class RoleResponse(RoleBase):
+    id: UUID
+    # Incluimos los permisos aquí para que cuando selecciones el perfil el front sepa cuáles switches prender.
+    permissions: List[PermissionResponse] = [] 
+
+    class Config:
+        from_attributes = True
 
 class UserCreate(BaseModel):
     email: str

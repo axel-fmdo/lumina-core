@@ -82,7 +82,7 @@ def read_users(
         "data": results
     }
 
-@router.get("/validate-email-uniqueness", status_code=status.HTTP_200_OK)
+@router.get("/validate-email-uniqueness", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("users_read"))])
 def check_email_uniqueness(
     email: str, 
     user_id: Optional[UUID] = Query(None, description="ID del usuario excluido (para edición)"),

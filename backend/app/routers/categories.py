@@ -44,13 +44,13 @@ def read_categories(
     }
 
 # Método para obtener el listado de categorías para el Select
-@router.get("/select", response_model=List[CategoryDropdown], dependencies=[Depends(PermissionChecker("categories_read"))])
+@router.get("/select", response_model=List[CategoryDropdown])
 def read_categories(db: Session = Depends(get_db)):
     # Traemos todos los roles para llenar selects
     return db.query(models.Category).all()
 
 # --- MÉTODO AUXILIAR PARA VALIDACIÓN ---
-@router.get("/validate-category-uniqueness", status_code=status.HTTP_200_OK)
+@router.get("/validate-category-uniqueness", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("categories_read"))])
 def validate_category_name(
     name: str, 
     category_id: Optional[UUID] = Query(None, description="ID del activo excluido (para edición)"),
@@ -76,10 +76,10 @@ def validate_category_name(
     return {"message": "Nombre de categoría disponible."}
 
 # 2. CREATE
-@router.post("/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(PermissionChecker("categories_create"))])
 def create_category(category_in: schemas.CategoryCreate, response: Response,db: Session = Depends(get_db)):
 
-    # Se valida que el Código Interno sea único
+    # Se valida que el Nombre sea único
     existing_name = db.query(models.Category).filter(models.Category.name == category_in.name).first()
     if existing_name:
         raise HTTPException(status_code=409, detail=f"Una categoría con el nombre '{category_in.name}' ya existe.")
@@ -94,7 +94,7 @@ def create_category(category_in: schemas.CategoryCreate, response: Response,db: 
     return new_category
 
 # 3. UPDATE
-@router.put("/{category_id}", response_model=schemas.CategoryResponse)
+@router.put("/{category_id}", response_model=schemas.CategoryResponse, dependencies=[Depends(PermissionChecker("categories_update"))])
 def update_category(category_id: str, category_data: schemas.CategoryUpdate, response: Response, db: Session = Depends(get_db)):
     # Se busca la categoría a actualizar
     category = db.query(models.Category).filter(models.Category.id == category_id).first()
@@ -116,7 +116,7 @@ def update_category(category_id: str, category_data: schemas.CategoryUpdate, res
     return category
 
 # 4. DELETE
-@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(PermissionChecker("categories_delete"))])
 def delete_category(category_id: str, response: Response, db: Session = Depends(get_db)):
     # 1. Buscar la categoría
     category = db.query(models.Category).filter(models.Category.id == category_id).first()

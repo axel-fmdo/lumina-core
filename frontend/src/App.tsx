@@ -1,14 +1,19 @@
+// App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Login } from "./pages/Login";
-import {UsersView} from "./pages/UsersView";
+import { UsersView } from "./pages/UsersView";
 import { AssetsView } from "./pages/AssetsView";
 import { CategoriesView } from "./pages/CategoriesView";
+import { RolesView } from "./pages/RolesView";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { RootState } from "./redux/store";
 import { Toaster } from "sonner";
+import { usePermission } from "./hooks/usePermission";
 
-// Componente Protector: Si no hay token, te patea al login
+// Componente Protector de Autenticación
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   
@@ -19,11 +24,27 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Componente Protector de Permisos
+const PermissionRoute = ({ 
+  children, 
+  permission 
+}: { 
+  children: JSX.Element; 
+  permission: string;
+}) => {
+  const { hasPermission } = usePermission();
+  
+  if (!hasPermission(permission)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <BrowserRouter>
-    {/* Toastr para sistema de notificaciones globales */}
-    <Toaster 
+      <Toaster 
         position="top-right"
         richColors
         theme="dark"
@@ -34,25 +55,63 @@ function App() {
         {/* Ruta Pública */}
         <Route path="/login" element={<Login />} />
 
-        {/* Rutas Protegidas (Dashboard y demás) */}
+        {/* Página de Error - Sin Permisos */}
+        <Route path="/unauthorized" element={
+          <ProtectedRoute>
+            <UnauthorizedPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Rutas Protegidas con Permisos */}
         <Route path="/" element={
-            <ProtectedRoute>
-                <MainLayout />
-            </ProtectedRoute>
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
         }>
-            <Route index element={
-                <div className="p-4">
-                  <h1 className="text-3xl font-bold text-white">Dashboard Protegido</h1>
-                  <p className="text-lumina-muted mt-2">Bienvenido al sistema.</p>
-                </div>
-            } />
-            <Route path="users" element={<UsersView/>} />
-            <Route path="assets" element={<AssetsView/>} />
-            <Route path="categories" element={<CategoriesView/>} />
+          {/* Dashboard */}
+          <Route index element={
+            <PermissionRoute permission="dashboard_read">
+              <div className="p-4">
+                <h1 className="text-3xl font-bold text-white">Dashboard Protegido</h1>
+                <p className="text-lumina-muted mt-2">Bienvenido al sistema.</p>
+              </div>
+            </PermissionRoute>
+          } />
+
+          {/* Usuarios */}
+          <Route path="users" element={
+            <PermissionRoute permission="users_read">
+              <UsersView />
+            </PermissionRoute>
+          } />
+
+          {/* Activos */}
+          <Route path="assets" element={
+            <PermissionRoute permission="assets_read">
+              <AssetsView />
+            </PermissionRoute>
+          } />
+
+          {/* Categorías */}
+          <Route path="categories" element={
+            <PermissionRoute permission="categories_read">
+              <CategoriesView />
+            </PermissionRoute>
+          } />
+
+          {/* Roles */}
+          <Route path="roles" element={
+            <PermissionRoute permission="roles_read">
+              <RolesView />
+            </PermissionRoute>
+          } />
+
+          {/* Ruta no encontrada dentro del layout */}
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
         
-        {/* Cualquier otra ruta redirige a login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Ruta no encontrada fuera del layout (para cualquier URL no definida) */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

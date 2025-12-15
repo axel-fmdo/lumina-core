@@ -133,9 +133,13 @@ export const AssetsView = () => {
 
         try{
             setIsDeleting(true);
-            await api.delete(`/assets/${assetToDelete.id}`);
-            setAssetToDelete(null);
-            fetchAssets(); // Recargar la lista
+            const response = await api.delete(`/assets/${assetToDelete.id}`);
+            
+            if(response){
+                setAssetToDelete(null);
+                fetchAssets(); // Recargar la lista
+            }
+            
         } catch (error) {
             console.error("Error al eliminar el activo: ", error);
         } finally {

@@ -57,7 +57,7 @@ def read_assets(
         "data": assets,
     }
 
-@router.get("/validate-asset-uniqueness", status_code=status.HTTP_200_OK)
+@router.get("/validate-asset-uniqueness", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("assets_read"))])
 def check_asset_uniqueness(
     value: str, 
     field: str = Query(..., description="Campo a validar: 'internal_code' o 'serial_number'"),
@@ -128,7 +128,7 @@ def create_asset(
     return new_asset
 
 # Asignar un equipo a un usuario
-@router.post("/{asset_id}/assign", status_code=status.HTTP_200_OK)
+@router.post("/{asset_id}/assign", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("assets_read"))])
 def assign_asset(
     asset_id: UUID,
     assign_data: schemas.AssetAssign, # Recibimos user_id
@@ -166,7 +166,7 @@ def assign_asset(
     return {"message": "Activo asignado correctamente", "asset": asset}
 
 # Devolver un activo
-@router.post("/{asset_id}/return", status_code=status.HTTP_200_OK)
+@router.post("/{asset_id}/return", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("assets_read"))])
 def return_asset(
     asset_id: UUID,
     db: Session = Depends(get_db)

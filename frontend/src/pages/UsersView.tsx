@@ -41,7 +41,7 @@ export const UsersView = () => {
 
     useEffect(() => {
         if (!rolesLoaded) {
-            const response = api.get("/roles/").then((res) => setRoles(res.data));
+            const response = api.get("/roles/select").then((res) => setRoles(res.data));
 
             if(response){
                 setRolesLoaded(true);
@@ -59,9 +59,12 @@ export const UsersView = () => {
 
         try{
             setIsDeleting(true);
-            await api.delete(`/users/${userToDelete.id}`);
-            setUserToDelete(null);
-            fetchUsers(); // Recargar la lista
+            const response = await api.delete(`/users/${userToDelete.id}`);
+            
+            if(response){
+                setUserToDelete(null);
+                fetchUsers(); // Recargar la lista
+            }
         } catch (error) {
             console.error("Error al eliminar el usuario: ", error);
         } finally {
