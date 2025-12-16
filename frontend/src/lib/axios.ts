@@ -19,15 +19,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor de los mensajes de respuesta del backend
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 // Interceptor de Response (Manejo de Mensajes) ---
 api.interceptors.response.use(
     (response) => {
@@ -47,10 +38,16 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        // Manejo de Errores
-        if (error.response) {
+      const isLoginError = error.config?.url?.includes('/auth/login');
+
+      // Manejo de Errores
+      if (error.response) {
         const { status, data } = error.response;
         const errorMessage = data?.detail || "Ocurrió un error inesperado";
+
+        if(isLoginError && status === 401) {
+          return Promise.reject(error);
+        }
 
         // Personalización por el tipo de error
         if (status === 401) {
@@ -71,11 +68,11 @@ api.interceptors.response.use(
                 toast.error("Error", { description: errorMessage });
             }
         }
-        } else {
+      } else {
         toast.error("Error de Conexión", { description: "No se pudo contactar al servidor." });
-        }
+      }
         
-        return Promise.reject(error);
+      return Promise.reject(error);
     }
 );
 

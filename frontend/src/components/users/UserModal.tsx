@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Role } from "../../types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, Save, Loader2, ChevronDown, AlertTriangle } from "lucide-react";
@@ -23,11 +24,6 @@ interface UserModalProps {
   onClose: () => void;
   onSuccess: () => void; // Para recargar la tabla al terminar
   userToEdit?: User | null; // Para editar un usuario existente
-}
-
-interface Role {
-  id: string;
-  name: string;
 }
 
 export const UserModal = ({ onClose, onSuccess, userToEdit }: UserModalProps) => {
@@ -80,7 +76,7 @@ export const UserModal = ({ onClose, onSuccess, userToEdit }: UserModalProps) =>
 
         let isMounted = true;
 
-        api.get("/roles/").then((res) => {
+        api.get("/roles/select").then((res) => {
             if (!isMounted) return;
             setRoles(res.data);
 

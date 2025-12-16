@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Category } from "../../types";
 import { z } from "zod";
 import { X, Save, Loader2, ChevronDown, AlertTriangle } from "lucide-react";
 import { motion, easeInOut, AnimatePresence } from "framer-motion";
@@ -13,7 +14,7 @@ const assetSchema = z.object({
     name: z.string().min(1, "El nombre es requerido."),
     internal_code: z.string().min(1, "El código interno es requerido."),
     serial_number: z.string().optional().nullable().transform(e => e === "" ? null : e),
-    category: z.string().min(1, "Selecciona una categoría."),
+    category_id: z.string().min(1, "Selecciona una categoría."),
     model: z.string().optional(),
     status: z.nativeEnum(AssetStatus),
     cost: z.number()
@@ -30,11 +31,6 @@ interface AssetModalProps {
   onClose: () => void;
   onSuccess: () => void; // Para recargar la tabla al terminar
   assetToEdit?: Asset | null; // Para editar un usuario existente
-}
-
-interface Category {
-  id: string;
-  name: string;
 }
 
 export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) => {
@@ -87,40 +83,13 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
         }
     };
 
-    // Cargar roles y/o el usuario al abrir el modal
+    // Cargar categorías y/o el activo al abrir el modal
     useEffect(() => {
 
-        // Solo reseteamos si estamos montados y abiertos
-        if (assetToEdit) {
-                // Modo Edición: Llenar formulario
-                reset({
-                name: assetToEdit.name,
-                internal_code: assetToEdit.internal_code,
-                serial_number: assetToEdit.serial_number || "",
-                category: assetToEdit.category,
-                model: assetToEdit.model || "",
-                status: assetToEdit.status,
-                cost: assetToEdit.cost || 0,
-                description: assetToEdit.description || "",
-                });
-        } else {
-                // Modo Creación: Limpiar
-                reset({
-                name: "",
-                internal_code: "",
-                serial_number: "",
-                category: "",
-                model: "",
-                status: AssetStatus.AVAILABLE,
-                cost: 0,
-                description: ""
-                });
-        }
-
-        /* PARA CUANDO HAYA ENDPOINT DE CATEGORIAS
+        
         let isMounted = true;
 
-        api.get("/categories/").then((res) => {
+        api.get("/categories/select").then((res) => {
             if (!isMounted) return;
             setCategories(res.data);
 
@@ -131,7 +100,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 name: assetToEdit.name,
                 internal_code: assetToEdit.internal_code,
                 serial_number: assetToEdit.serial_number || "",
-                category: assetToEdit.category,
+                category_id: assetToEdit.category.id,
                 model: assetToEdit.model || "",
                 status: assetToEdit.status,
                 cost: assetToEdit.cost || 0,
@@ -143,7 +112,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 name: "",
                 internal_code: "",
                 serial_number: "",
-                category: "",
+                category_id: "",
                 model: "",
                 status: AssetStatus.AVAILABLE,
                 cost: 0,
@@ -152,7 +121,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
             }
         });
 
-        return () => { isMounted = false; }; */
+        return () => { isMounted = false; };
     }, [ assetToEdit]);
 
     const onError = (errors: any) => {
@@ -301,22 +270,21 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                             <label className="text-sm font-medium text-lumina-muted">Categoría <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <select 
-                                    {...register("category")} 
+                                    {...register("category_id")} 
                                     className={`w-full bg-lumina-bg/50 border rounded-lg px-4 py-2 text-white outline-none appearance-none transition-all ${
-                                        errors.category 
+                                        errors.category_id 
                                         ? "border-red-500/50 focus:ring-2 focus:ring-red-500/50"
                                         : "border-lumina-border focus:ring-2 focus:ring-lumina-primary/50"
                                     }`} 
                                 >
                                     <option value="">Seleccionar Categoría</option>
-                                    <option value="Cómputo">Cómputo</option>
-                                    <option value="Periféricos">Periféricos</option>
-                                    <option value="Móvil">Móvil</option>
-                                    <option value="Mobiliario">Mobiliario</option>
+                                    {categories.map(category => (
+                                        <option key={category.id} value={category.id}>{category.name}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/70"/>
                             </div>
-                            {errors.category && <p className="text-xs text-red-400">{errors.category.message}</p>}
+                            {errors.category_id && <p className="text-xs text-red-400">{errors.category_id.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-lumina-muted">Estado <span className="text-red-500">*</span></label>

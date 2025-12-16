@@ -24,11 +24,13 @@ type MenuItem = {
   label: string;
   path?: string;
   permission?: string; // Permiso requerido para ver este item
+  permissions?: string[];
   subItems?: { 
     label: string; 
     path: string; 
     icon?: any;
     permission?: string; // Permiso requerido para ver este subitem
+    permissions?: string[];
   }[];
 };
 
@@ -37,7 +39,7 @@ const MENU_ITEMS: MenuItem[] = [
     icon: LayoutDashboard, 
     label: "Dashboard", 
     path: "/",
-    permission: "dashboard_read" // Define el permiso necesario
+    permission: "dashboard_read"
   },
   { 
     icon: Box, 
@@ -54,33 +56,32 @@ const MENU_ITEMS: MenuItem[] = [
   { 
     icon: Settings, 
     label: "Configuración",
-    // Para items padre, puedes omitir el permiso si quieres que sea visible
-    // cuando al menos un subitem sea accesible
+    permission: "settings_read",
     subItems: [
       { 
         label: "Perfiles", 
         path: "/roles", 
         icon: UserCog,
-        permission: "roles_read"
+        permissions: ["roles_read", "settings_read"]
       },
       { 
-        label: "Permisos", 
-        path: "/permissions", 
+        label: "Seguridad", 
+        path: "/security", 
         icon: Shield,
-        permission: "permissions_read"
+        permissions: ["security_read", "settings_read", "roles_read"]
       },
       { 
         label: "Categorías", 
         path: "/categories", 
         icon: Tags,
-        permission: "categories_read"
+        permissions: ["categories_read", "settings_read"]
       }
     ]
   },
 ];
 
 export const Sidebar = () => {
-  const { hasPermission } = usePermission();
+  const { hasPermission, hasAllPermissions } = usePermission();
   const [isExpanded, setIsExpanded] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const dispatch = useDispatch();
@@ -96,6 +97,10 @@ export const Sidebar = () => {
           // Si el subitem tiene permiso, validarlo
           if (subItem.permission) {
             return hasPermission(subItem.permission);
+          }
+
+          if(subItem.permissions){
+            return hasAllPermissions(subItem.permissions)
           }
           // Si no tiene permiso definido, mostrarlo por defecto
           return true;
@@ -114,6 +119,10 @@ export const Sidebar = () => {
       // Para items sin subItems, validar su permiso
       if (item.permission) {
         return hasPermission(item.permission);
+      }
+
+      if(item.permissions){
+        return hasAllPermissions(item.permissions)
       }
       
       // Si no tiene permiso definido, mostrarlo por defecto
@@ -193,7 +202,7 @@ export const Sidebar = () => {
                   <button
                     onClick={() => toggleSubMenu(item.label)}
                     className={cn(
-                      "flex items-center h-12 px-3 rounded-lg transition-all duration-200 group relative w-full",
+                      "flex items-center h-12 px-4 rounded-lg transition-all duration-200 group relative w-full",
                       (isActiveParent || isOpen) ? "text-white" : "text-lumina-muted hover:bg-white/5 hover:text-white"
                     )}
                   >
@@ -251,7 +260,7 @@ export const Sidebar = () => {
                 key={item.path}
                 to={item.path!}
                 className={({ isActive }) => cn(
-                  "flex items-center h-12 px-3 rounded-lg transition-all duration-200 group relative",
+                  "flex items-center h-12 px-4 rounded-lg transition-all duration-200 group relative",
                   isActive 
                     ? "bg-lumina-primary/10 text-lumina-primary" 
                     : "text-lumina-muted hover:bg-white/5 hover:text-white"

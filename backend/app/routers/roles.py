@@ -70,6 +70,11 @@ def validate_category_name(
         )
     return {"message": "Nombre de Rol disponible."}
 
+@router.get("/permissions", response_model=List[schemas.PermissionResponse])
+def read_all_permissions_catalog(db: Session = Depends(get_db)):
+    """Retorna TODOS los permisos disponibles para pintar la matriz"""
+    return db.query(models.Permission).all()
+
 # 2. CREATE ROLE (Solo nombre y descripción)
 @router.post("/", response_model=schemas.RoleResponse, dependencies=[Depends(PermissionChecker("roles_create"))], status_code=status.HTTP_201_CREATED)
 def create_role(role_in: schemas.RoleCreate, response: Response, db: Session = Depends(get_db)):

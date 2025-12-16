@@ -28,6 +28,13 @@ export const usePermission = () => {
     return permissions.some(p => user.permissions.includes(p));
   };
 
+  const hasAllPermissions = (permissions: string[]): boolean => {
+    if (!user) return false;
+    if (user.roles.includes('Super Admin')) return true;
+    
+    return permissions.every(p => user.permissions.includes(p));
+  };
+
   // Retornamos también el usuario por si necesitamos mostrar el nombre
-  return { hasPermission, hasAnyPermission, user };
+  return { hasPermission, hasAnyPermission, hasAllPermissions, user };
 };

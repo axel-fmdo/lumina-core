@@ -307,8 +307,8 @@ export const AssetsView = () => {
                             >
                                 <option value="">Todas las categorías</option>
                                 {categories.map(category => (
-                                <option key={category.id} value={category.id}>{category.name}</option>
-                            ))}
+                                    <option key={category.id} value={category.id}>{category.name}</option>
+                                ))}
                             </select>
                             <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/70"/>
                         </div>

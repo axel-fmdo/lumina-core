@@ -159,7 +159,7 @@ class AssetResponse(BaseModel):
     internal_code: str
     serial_number: Optional[str] = None
     
-    category: CategoryResponse 
+    category: Optional[CategoryResponse] 
     
     model: Optional[str] = None
     status: AssetStatusEnum

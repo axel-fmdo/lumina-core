@@ -41,14 +41,39 @@ export const Login = () => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
 
-      const token = response.data.access_token;
-      dispatch(setToken(token)); // Se guarda el token en Redux
-      await dispatch(fetchUserProfile()).unwrap(); //Se obtiene el perfil del usuario
-      navigate("/"); // Se redirige al Dashboard
+      if(response.data){
+        const token = response.data.access_token;
+        dispatch(setToken(token)); // Se guarda el token en Redux
+        const userProfile = await dispatch(fetchUserProfile()).unwrap(); //Se obtiene el perfil del usuario
+        
+        if(userProfile){
+            navigate("/"); // Se redirige al Dashboard
+        }
+      }
 
     } catch (err: any) {
         console.error("Login Error:", err);
-        setError("Credenciales incorrectas o servidor no disponible");
+        // Manejo específico de errores de login
+        if (err.response) {
+            const { status, data } = err.response;
+            
+            if (status === 401) {
+            // Error de credenciales incorrectas
+            setError(data?.detail || "Credenciales incorrectas");
+            } else if (status === 400) {
+            // Usuario inactivo u otro error de validación
+            setError(data?.detail || "Usuario inactivo o datos incorrectos");
+            } else {
+            // Otros errores del servidor
+            setError("Error al iniciar sesión. Intenta nuevamente.");
+            }
+        } else if (err.request) {
+            // Error de conexión
+            setError("No se pudo conectar con el servidor");
+        } else {
+            // Error desconocido
+            setError("Ocurrió un error inesperado");
+        }
     } finally {
         setIsLoading(false);
     }
@@ -70,10 +95,15 @@ export const Login = () => {
                 <p className="text-lumina-muted">Ingresa a Lumina Asset Manager</p>
             </div>
 
+            {/* Mensaje de Error */}
             {error && (
-                <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-center">
-                    {error}
-                </div>
+            <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-center"
+            >
+                {error}
+            </motion.div>
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

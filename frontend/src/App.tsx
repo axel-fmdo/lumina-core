@@ -7,6 +7,7 @@ import { UsersView } from "./pages/UsersView";
 import { AssetsView } from "./pages/AssetsView";
 import { CategoriesView } from "./pages/CategoriesView";
 import { RolesView } from "./pages/RolesView";
+import { SecurityView } from "./pages/SecurityView";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { RootState } from "./redux/store";
@@ -24,7 +25,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Componente Protector de Permisos
+// Componente Protector de un solo Permiso
 const PermissionRoute = ({ 
   children, 
   permission 
@@ -40,6 +41,23 @@ const PermissionRoute = ({
   
   return children;
 };
+
+// Componente protector de varios Permisos
+const PermissionsRoute = ({
+  children,
+  permissions
+}: {
+  children: JSX.Element;
+  permissions: string[];
+}) => {
+  const { hasAllPermissions } = usePermission();
+
+  if(!hasAllPermissions(permissions)){
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
@@ -94,16 +112,23 @@ function App() {
 
           {/* Categorías */}
           <Route path="categories" element={
-            <PermissionRoute permission="categories_read">
+            <PermissionsRoute permissions={["categories_read", "settings_read"]}>
               <CategoriesView />
-            </PermissionRoute>
+            </PermissionsRoute>
           } />
 
           {/* Roles */}
           <Route path="roles" element={
-            <PermissionRoute permission="roles_read">
+            <PermissionsRoute permissions={["roles_read", "settings_read"]}>
               <RolesView />
-            </PermissionRoute>
+            </PermissionsRoute>
+          } />
+
+          {/* Seguridad */}
+          <Route path="security" element={
+            <PermissionsRoute permissions={["roles_read", "settings_read", "security_read"]}>
+              <SecurityView />
+            </PermissionsRoute>
           } />
 
           {/* Ruta no encontrada dentro del layout */}

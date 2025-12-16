@@ -94,13 +94,12 @@ def check_asset_uniqueness(
 # Crear un Activo nuevo (Protegico con assets_create)
 @router.post("/", response_model=schemas.AssetResponse, dependencies=[Depends(PermissionChecker("assets_create"))])
 def create_asset(
-    asset: schemas.AssetCreate,
     asset_in: schemas.AssetCreate, 
     response: Response,
     db: Session = Depends(get_db)
 ):
     # Validar que la categoría exista antes de insertar
-    category_exists = db.query(models.Category).filter(models.Category.id == asset.category_id).first()
+    category_exists = db.query(models.Category).filter(models.Category.id == asset_in.category_id).first()
     if not category_exists:
         raise HTTPException(status_code=400, detail="La categoría seleccionada no existe.")
 
@@ -116,7 +115,15 @@ def create_asset(
              raise HTTPException(status_code=409, detail=f"El número de serie '{asset_in.serial_number}' ya está registrado.")
 
     # Se crea el modelo
-    new_asset = models.Asset(**asset_in.dict())
+    new_asset = models.Asset(
+        name=asset_in.name,
+        internal_code=asset_in.internal_code,
+        serial_number=asset_in.serial_number,
+        model=asset_in.model,
+        cost=asset_in.cost,
+        status=asset_in.status,
+        category_id=asset_in.category_id
+    )
     
     db.add(new_asset)
     db.commit()

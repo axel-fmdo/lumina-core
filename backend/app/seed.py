@@ -12,6 +12,15 @@ SYSTEM_PERMISSIONS = [
     {"name": "Editar Usuarios", "slug": "users_update", "description": "Capacidad de modificar usuarios existentes"},
     {"name": "Eliminar Usuarios", "slug": "users_delete", "description": "Capacidad de borrar usuarios"},
     
+    # --- ROLES ---
+    {"name": "Ver Roles", "slug": "roles_read", "description": "Ver listado de roles del sistema"},
+    {"name": "Crear Roles", "slug": "roles_create", "description": "Crear nuevos roles de usuario"},
+    {"name": "Editar Roles", "slug": "roles_update", "description": "Modificar nombre y descripción de roles"},
+    {"name": "Eliminar Roles", "slug": "roles_delete", "description": "Eliminar roles del sistema"},
+
+    # --- SEGURIDAD ---
+    {"name": "Ver Matriz Seguridad", "slug": "security_read", "description": "Acceso a la matriz de permisos por rol"},
+
     # --- CATEGORÍAS ---
     {"name": "Ver Categorías", "slug": "categories_read", "description": "Ver listado de categorías"},
     {"name": "Crear Categorías", "slug": "categories_create", "description": "Crear nuevas categorías"},
@@ -34,16 +43,18 @@ ROLES_CONFIG = [
     {
         "name": "Super Admin",
         "description": "Acceso total al sistema",
-        "permissions": ["*"] 
+        "permissions": ["*"] # Hereda roles_* y security_read automáticamente
     },
     {
         "name": "IT Manager",
         "description": "Gestión de activos e inventario",
         "permissions": [
             "dashboard_read",
-            "categories_read", "categories_create", "categories_update", "categories_delete", # Agregamos permisos de categorías
+            "categories_read", "categories_create", "categories_update", "categories_delete",
             "assets_read", "assets_create", "assets_update", "assets_delete",
-            "users_read"
+            "users_read",
+            "roles_read", 
+            "security_read"
         ]
     },
     {
@@ -51,14 +62,16 @@ ROLES_CONFIG = [
         "description": "Solo lectura para revisión de inventarios",
         "permissions": [
             "dashboard_read",
-            "categories_read", # Solo lectura
+            "categories_read",
             "assets_read",
-            "users_read"
+            "users_read",
+            "roles_read",
+            "security_read"
         ]
     }
 ]
 
-# 3. LISTA DE CATEGORÍAS DEMO (NUEVO)
+# 3. LISTA DE CATEGORÍAS DEMO
 DEMO_CATEGORIES = [
     "Cómputo",
     "Periféricos",
@@ -90,7 +103,6 @@ DEMO_USERS = [
 ]
 
 # 5. ACTIVOS DEMO
-# Nota: "category_name" es un auxiliar para buscar el ID real en tiempo de ejecución
 DEMO_ASSETS = [
     {
         "name": "MacBook Pro M3",
@@ -133,7 +145,7 @@ DEMO_ASSETS = [
 def seed_db():
     db = SessionLocal()
     try:
-        print("Iniciando sembrado de base de datos (Demo Ready)...")
+        print("Iniciando sembrado de base de datos...")
 
         # --- A. CREAR PERMISOS ---
         print("   > Gestionando Permisos...")
@@ -143,6 +155,7 @@ def seed_db():
             if not perm:
                 perm = models.Permission(**perm_data)
                 db.add(perm)
+                print(f"     + Permiso creado: {perm_data['slug']}")
             all_permissions_map[perm_data["slug"]] = perm
         db.commit()
 
@@ -166,7 +179,7 @@ def seed_db():
 
         # --- C. CREAR CATEGORÍAS ---
         print("   > Gestionando Categorías...")
-        categories_map = {} # Mapa nombre -> objeto_db
+        categories_map = {} 
         for cat_name in DEMO_CATEGORIES:
             cat = db.query(models.Category).filter(models.Category.name == cat_name).first()
             if not cat:
@@ -175,7 +188,7 @@ def seed_db():
                 db.commit()
                 db.refresh(cat)
                 print(f"     + Categoría creada: {cat_name}")
-            categories_map[cat_name] = cat # Guardamos para usar en activos
+            categories_map[cat_name] = cat 
 
         # --- D. CREAR USUARIOS ---
         print("   > Gestionando Usuarios...")
@@ -184,7 +197,7 @@ def seed_db():
             if not user:
                 role_obj = db.query(models.Role).filter_by(name=user_data["role"]).first()
                 if not role_obj:
-                    print(f"     ⚠️ Error: Rol '{user_data['role']}' no encontrado.")
+                    print(f"     Error: Rol '{user_data['role']}' no encontrado.")
                     continue
 
                 new_user = models.User(
@@ -201,21 +214,15 @@ def seed_db():
         # --- E. CREAR ACTIVOS ---
         print("   > Gestionando Activos...")
         for asset_data in DEMO_ASSETS:
-            # Validamos si ya existe por código interno
             asset = db.query(models.Asset).filter_by(internal_code=asset_data["internal_code"]).first()
             
             if not asset:
-                # 1. Extraemos el nombre de la categoría del diccionario
                 cat_name = asset_data.pop("category_name")
-                
-                # 2. Buscamos el ID real en el mapa que creamos arriba
                 if cat_name in categories_map:
                     category_obj = categories_map[cat_name]
-                    
-                    # 3. Creamos el activo inyectando el category_id
                     new_asset = models.Asset(
-                        category_id=category_obj.id, # Aquí está la magia
-                        **asset_data # El resto de campos (name, serial, etc)
+                        category_id=category_obj.id,
+                        **asset_data
                     )
                     db.add(new_asset)
                     db.commit()

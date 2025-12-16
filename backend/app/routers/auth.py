@@ -48,6 +48,6 @@ def login(
     access_token = create_access_token(data={"sub": str(user.id)})
 
     first_name = user.full_name.split(" ")[0] if user.full_name else "Usuario"
-    response.headers["X-Process-Message"] = f"¡Bienvenido de nuevo, {first_name}!"
+    response.headers["X-Process-Message"] = f"¡Bienvenido, {first_name}!"
 
     return {"access_token": access_token, "token_type": "bearer"}
