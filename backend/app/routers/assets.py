@@ -1,8 +1,8 @@
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query, Body
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, desc
 from datetime import datetime
 from app.core.database import get_db
 from app import models, schemas
@@ -91,6 +91,33 @@ def check_asset_uniqueness(
         
     return {"message": "Valor disponible."}
 
+@router.get("/{asset_id}/history", response_model=List[schemas.AssetHistoryResponse], dependencies=[Depends(PermissionChecker("assets_read"))])
+def read_asset_history(
+    asset_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el historial completo de movimientos de un activo específico.
+    Ordenado del más reciente al más antiguo.
+    """
+    # 1. Validamos que el activo exista
+    asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+
+    # 2. Consultamos la tabla de historiales
+    history = db.query(models.AssetHistory)\
+        .filter(models.AssetHistory.asset_id == asset_id)\
+        .options(
+            # Cargamos las relaciones para mostrar los nombres de usuarios
+            joinedload(models.AssetHistory.assigned_to),
+            joinedload(models.AssetHistory.action_by)
+        )\
+        .order_by(desc(models.AssetHistory.created_at))\
+        .all()
+
+    return history
+
 # Crear un Activo nuevo (Protegico con assets_create)
 @router.post("/", response_model=schemas.AssetResponse, dependencies=[Depends(PermissionChecker("assets_create"))])
 def create_asset(
@@ -138,14 +165,14 @@ def create_asset(
 @router.post("/{asset_id}/assign", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("assets_read"))])
 def assign_asset(
     asset_id: UUID,
-    assign_data: schemas.AssetAssign, # Recibimos user_id
+    assign_data: schemas.AssetAssign, # Recibimos user_id y opcional un comentario
     db: Session = Depends(get_db),
-    # current_user... (Si quieres restringir quién puede asignar)
+    current_user: models.User = Depends(get_current_user)
 ):
     # 1. Buscar el Activo
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
-        raise HTTPException(status_code=404, detail="Activo no encontrado")
+        raise HTTPException(status_code=404, detail="Activo no encontrado.")
 
     # 2. Validar que el activo esté DISPONIBLE
     # No puedes asignar algo que ya está asignado, dañado o de baja
@@ -159,29 +186,42 @@ def assign_asset(
     user = db.query(models.User).filter(models.User.id == assign_data.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-
-    # 4. Realizar la Asignación
-    asset.assigned_to_id = user.id
-    asset.status = models.AssetStatus.ASSIGNED # Cambiar estado automáticamente
     
-    # (Opcional) Agregar nota automática al historial/descripción
-    # asset.description = f"{asset.description or ''}\n[ASIGNADO: {datetime.now()} a {user.full_name}]"
+    try:
+        # Se actualiza el Estado del activo
+        asset.assigned_to_id = user.id
+        asset.status = models.AssetStatus.ASSIGNED 
 
-    db.commit()
-    db.refresh(asset)
+        # Se crea el registro en Historial
+        history = models.AssetHistory(
+            asset_id=asset.id,
+            assigned_to_id=user.id,
+            action_by_id=current_user.id,
+            action_type=models.AssetActionType.ASSIGN,
+            comments=assign_data.comments
+        )
+        db.add(history)
 
-    return {"message": "Activo asignado correctamente", "asset": asset}
+        db.commit()
+        db.refresh(asset)
+
+        return {"message": "Activo asignado correctamente.", "asset": asset}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al asignar el activo.")
 
 # Devolver un activo
 @router.post("/{asset_id}/return", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("assets_read"))])
 def return_asset(
     asset_id: UUID,
-    db: Session = Depends(get_db)
+    comments: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     # 1. Buscar el Activo
     asset = db.query(models.Asset).filter(models.Asset.id == asset_id).first()
     if not asset:
-        raise HTTPException(status_code=404, detail="Activo no encontrado")
+        raise HTTPException(status_code=404, detail="Activo no encontrado.")
 
     # 2. Validar que esté ASIGNADO actualmente
     if asset.status != models.AssetStatus.ASSIGNED:
@@ -189,15 +229,31 @@ def return_asset(
             status_code=400, 
             detail="Este activo no se encuentra asignado actualmente."
         )
-
-    # 3. Realizar la Devolución
-    asset.assigned_to_id = None # Romper el vínculo
-    asset.status = models.AssetStatus.AVAILABLE # Volver a disponible
     
-    db.commit()
-    db.refresh(asset)
+    previous_user_id = asset.assigned_to_id # Guardamos quién lo tenía para el historial
 
-    return {"message": "Activo devuelto al inventario correctamente", "asset": asset}
+    try:
+        # Se libera el activo
+        asset.assigned_to_id = None
+        asset.status = models.AssetStatus.AVAILABLE
+
+        # Se registra en el historial
+        history = models.AssetHistory(
+            asset_id=asset.id,
+            assigned_to_id=previous_user_id, # Quién lo devolvió
+            action_by_id=current_user.id,
+            action_type=models.AssetActionType.UNASSIGN,
+            comments=comments
+        )
+        db.add(history)
+
+        db.commit()
+        db.refresh(asset)
+
+        return {"message": "Activo devuelto al inventario correctamente.", "asset": asset}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, "Error al procesar la devolución")
 
 # Actualizar un Activo (Protegido con assets_update)
 @router.put("/{asset_id}", response_model=schemas.AssetResponse, dependencies=[Depends(PermissionChecker("assets_update"))])

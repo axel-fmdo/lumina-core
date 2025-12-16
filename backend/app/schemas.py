@@ -86,7 +86,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     role_id: Optional[UUID] = None
 
-# Modelo de usuario simple para respuestas anidadas
+# Modelo de usuario simple para respuestas anidadas y el historial
 class UserSimple(BaseModel):
     id: UUID
     full_name: str
@@ -151,6 +151,7 @@ class AssetUpdate(BaseModel):
 
 class AssetAssign(BaseModel):
     user_id: UUID
+    comments: Optional[str] = None
 
 # Esquema de Respuesta (Output)
 class AssetResponse(BaseModel): 
@@ -173,3 +174,34 @@ class AssetResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class AssetHistoryResponse(BaseModel):
+    id: UUID
+    action_type: str  # "Asignación", "Devolución", etc.
+    comments: Optional[str] = None
+    created_at: datetime
+    
+    # Quién recibió el equipo
+    assigned_to: Optional[UserSimple] = None
+    # Quién registró el movimiento (Admin)
+    action_by: Optional[UserSimple] = None
+
+    class Config:
+        from_attributes = True
+
+class DashboardStats(BaseModel):
+    total_assets: int
+    total_value: float
+    assigned_count: int
+    available_count: int
+    maintenance_count: int
+
+class CategoryStat(BaseModel):
+    name: str
+    count: int
+    value: float
+
+class DashboardResponse(BaseModel):
+    stats: DashboardStats
+    category_distribution: List[CategoryStat]
+    recent_activity: List[AssetHistoryResponse]

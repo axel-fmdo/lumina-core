@@ -112,3 +112,33 @@ class Category(Base):
 
     # Relación inversa: Una categoría tiene muchos activos
     assets = relationship("Asset", back_populates="category")
+
+# Enum para el tipo de movimiento
+class AssetActionType(str, enum.Enum):
+    ASSIGN = "Asignación"      # Check-out (Salida)
+    UNASSIGN = "Devolución"    # Check-in (Entrada)
+    MAINTENANCE = "Mantenimiento"
+    RETIRED = "Baja"
+
+class AssetHistory(Base):
+    __tablename__ = "asset_histories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False)
+    
+    # ¿A quién se le dio o quién lo devolvió?
+    assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    
+    # ¿Quién ejecutó la acción en el sistema?
+    action_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
+    action_type = Column(SqEnum(AssetActionType), nullable=False)
+    comments = Column(String, nullable=True)
+    
+    # Fecha exacta del movimiento
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relaciones para poder mostrar nombres en el historial
+    asset = relationship("Asset")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id])
+    action_by = relationship("User", foreign_keys=[action_by_id])

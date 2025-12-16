@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Login } from "./pages/Login";
+import { DashboardView } from "./pages/Dashboard";
 import { UsersView } from "./pages/UsersView";
 import { AssetsView } from "./pages/AssetsView";
 import { CategoriesView } from "./pages/CategoriesView";
@@ -89,10 +90,7 @@ function App() {
           {/* Dashboard */}
           <Route index element={
             <PermissionRoute permission="dashboard_read">
-              <div className="p-4">
-                <h1 className="text-3xl font-bold text-white">Dashboard Protegido</h1>
-                <p className="text-lumina-muted mt-2">Bienvenido al sistema.</p>
-              </div>
+              <DashboardView/>
             </PermissionRoute>
           } />
 
