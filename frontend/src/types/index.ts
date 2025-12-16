@@ -69,3 +69,20 @@ export interface Asset {
   assigned_to?: UserSimple | null;
   created_at: string;
 }
+
+export interface AssetHistory {
+    id: string;
+    action_type: string; // "Asignación", "Devolución", etc.
+    comments?: string;
+    created_at: string;
+    assigned_to?: {
+        id: string;
+        full_name: string;
+        email: string;
+    };
+    action_by: {
+        id: string;
+        full_name: string;
+        email: string;
+    };
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit, ChevronDown, Box, Smartphone, Monitor, Cpu, UserPlus, UserMinus } from "lucide-react";
+import { Plus, Trash2, Edit, ChevronDown, Box, Smartphone, Monitor, Cpu, UserPlus, UserMinus, Clock } from "lucide-react";
 import api from "../lib/axios";
 import { Asset, AssetStatus } from "../types";
 import { Category } from "../types";
@@ -11,6 +11,8 @@ import { useTableParams } from "../hooks/useTableParams";
 import { AssetModal } from "../components/assets/AssetModal";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { UserSelectModal } from "../components/assets/UserSelectModal";
+import { AssetHistoryModal } from "../components/assets/AssetHistoryModal";
+import { ReturnAssetModal } from "../components/assets/ReturnAssetModal";
 import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -53,6 +55,8 @@ export const AssetsView = () => {
     const [assetToReturn, setAssetToReturn] = useState<Asset | null>(null);
     const [isReturnLoading, setIsReturnLoading] = useState(false);
 
+    const [assetHistory, setAssetHistory] = useState<Asset | null>(null);
+
     // Función para cargar datos
     const fetchAssets = async () => {
         try {
@@ -87,13 +91,13 @@ export const AssetsView = () => {
         setIsAssignModalOpen(true);
     };
 
-    const handleAssignUser = async (userId: string) => {
+    const handleAssignUser = async (userId: string, comments: string) => {
         if (!selectedAssetForAction) return;
 
         setIsActionLoading(true);
         try {
-            await api.post(`/assets/${selectedAssetForAction.id}/assign`, { user_id: userId });
-            toast.success("Activo asignado correctamente");
+            await api.post(`/assets/${selectedAssetForAction.id}/assign`, { user_id: userId, comments: comments });
+            toast.success("Activo asignado correctamente.");
             setIsAssignModalOpen(false);
             setSelectedAssetForAction(null);
             fetchAssets(); // Recargar tabla para ver cambios
@@ -110,18 +114,18 @@ export const AssetsView = () => {
         setIsReturnModalOpen(true);
     };
 
-    const executeReturnAsset = async () => {
+    const executeReturnAsset = async (comments: string) => {
         if (!assetToReturn) return;
 
         setIsReturnLoading(true);
         try {
-            await api.post(`/assets/${assetToReturn.id}/return`);
+            await api.post(`/assets/${assetToReturn.id}/return`, { comments: comments });
             toast.success(`Activo ${assetToReturn.internal_code} devuelto`);
             fetchAssets();
             setIsReturnModalOpen(false);
             setAssetToReturn(null);
         } catch (error: any) {
-            toast.error("Error al devolver", { description: error.response?.data?.detail });
+            toast.error("Error al devolver.", { description: error.response?.data?.detail });
         } finally {
             setIsReturnLoading(false);
         }
@@ -225,6 +229,15 @@ export const AssetsView = () => {
             className: "text-right",
             render: (asset) => (
                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* BOTÓN HISTORIAL */}
+                    <button 
+                        onClick={() => setAssetHistory(asset)}
+                        className="p-1.5 text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors tooltip"
+                        title="Ver Historial"
+                    >
+                        <Clock className="w-4 h-4" />
+                    </button>
+
                     {/* ASIGNAR (Solo si Available) */}
                     {asset.status === AssetStatus.AVAILABLE && (
                         <button 
@@ -369,14 +382,21 @@ export const AssetsView = () => {
                 {/* Modal para devincular el Activo de un Usario */}
                 <AnimatePresence mode="wait">
                     {isReturnModalOpen && assetToReturn && (
-                        <ConfirmModal 
+                        <ReturnAssetModal 
+                            asset={assetToReturn}
                             onClose={() => setIsReturnModalOpen(false)}
                             onConfirm={executeReturnAsset}
-                            title="Confirmar Devolución"
-                            description={`¿Estás seguro de desvincular el activo "${assetToReturn.name}" (${assetToReturn.internal_code}) del usuario actual? Pasará a estado Disponible.`}
-                            confirmText="Sí, Devolver"
-                            variant="warning"
                             isLoading={isReturnLoading}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* HISTORIAL */}
+                <AnimatePresence mode="wait">
+                    {assetHistory && (
+                        <AssetHistoryModal 
+                            asset={assetHistory}
+                            onClose={() => setAssetHistory(null)}
                         />
                     )}
                 </AnimatePresence>

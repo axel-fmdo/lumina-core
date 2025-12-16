@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Search, User as UserIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { X, Search, User as UserIcon, Loader2, CheckCircle2, MessageSquare } from "lucide-react";
 import { motion, easeInOut } from "framer-motion";
 import api from "../../lib/axios";
 import { User } from "../../types";
 
 interface UserSelectModalProps {
     onClose: () => void;
-    onSelect: (userId: string) => void;
+    onSelect: (userId: string, comments: string) => void;
     isLoadingAction: boolean;
 }
 
@@ -15,8 +15,9 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [comments, setComments] = useState("");
 
-    // 👇 EFECTO DE BÚSQUEDA INTELIGENTE (Server-Side)
+    // EFECTO DE BÚSQUEDA INTELIGENTE (Server-Side)
     useEffect(() => {
         // Creamos un temporizador para no llamar a la API por cada letra (Debounce)
         const delayDebounceFn = setTimeout(async () => {
@@ -27,13 +28,11 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                 const { data } = await api.get("/users/", {
                     params: {
                         skip: 0,
-                        limit: 10, // Traemos solo 10 resultados para ser eficientes
+                        limit: 5, // Traemos solo 5 resultados para ser eficientes
                         search: searchTerm || undefined // Solo enviamos si hay texto
                     }
                 });
                 
-                // 👇 CORRECCIÓN CLAVE: Accedemos a data.data
-                // Tu backend devuelve { data: [...], total: ... }, así que la lista está en data.data
                 if (data && Array.isArray(data.data)) {
                     setUsers(data.data);
                 } else {
@@ -41,7 +40,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                 }
 
             } catch (error) {
-                console.error("Error buscando usuarios", error);
+                console.error("Error buscando usuarios.", error);
                 setUsers([]);
             } finally {
                 setIsLoading(false);
@@ -54,7 +53,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
 
     const handleConfirm = () => {
         if (selectedUserId) {
-            onSelect(selectedUserId);
+            onSelect(selectedUserId, comments);
         }
     };
 
@@ -78,59 +77,78 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                     <button onClick={onClose} className="text-lumina-muted hover:text-white"><X className="w-5 h-5"/></button>
                 </div>
 
-                {/* Search Input */}
-                <div className="p-4 pb-2 shrink-0">
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-lumina-muted" />
-                        <input 
-                            type="text"
-                            placeholder="Buscar por nombre o correo..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-lumina-bg border border-lumina-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:ring-2 focus:ring-lumina-primary/50 outline-none placeholder:text-gray-600"
-                            autoFocus
+                {/* Body: Contenedor Scrollable */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                    
+                    {/* 1. Buscador */}
+                    <div className="p-4 pb-2 shrink-0">
+                        <label className="text-xs font-medium text-lumina-muted mb-1.5 block uppercase tracking-wider">Buscar Usuario</label>
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-lumina-muted" />
+                            <input 
+                                type="text"
+                                placeholder="Nombre o correo..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-lumina-bg border border-lumina-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:ring-2 focus:ring-lumina-primary/50 outline-none placeholder:text-gray-600 transition-all"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    {/* 2. Lista de Usuarios (Altura fija o flexible pero limitada) */}
+                    <div className="px-2 space-y-1 min-h-[150px] max-h-[250px] overflow-y-auto custom-scrollbar border-b border-white/5 pb-2">
+                        {isLoading ? (
+                            <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-lumina-primary"/></div>
+                        ) : users.length > 0 ? (
+                            users.map(user => {
+                                const isSelected = selectedUserId === user.id;
+                                return (
+                                    <button
+                                        key={user.id}
+                                        onClick={() => setSelectedUserId(user.id)}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left group border ${
+                                            isSelected 
+                                            ? "bg-lumina-primary/10 border-lumina-primary/50 ring-1 ring-lumina-primary/50" 
+                                            : "bg-transparent border-transparent hover:bg-white/5"
+                                        }`}
+                                    >
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+                                            isSelected ? "bg-lumina-primary text-white" : "bg-lumina-primary/10 text-lumina-primary"
+                                        }`}>
+                                            <UserIcon className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-medium truncate ${isSelected ? "text-white" : "text-gray-200"}`}>
+                                                {user.full_name}
+                                            </p>
+                                            <p className="text-xs text-lumina-muted truncate">{user.email}</p>
+                                        </div>
+                                        {isSelected && <CheckCircle2 className="w-5 h-5 text-lumina-primary animate-in fade-in zoom-in duration-200 shrink-0"/>}
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                                <p className="text-lumina-muted text-sm">No se encontraron usuarios</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 3. Área de Comentarios (Nueva) */}
+                    <div className="p-4 pt-4 shrink-0 bg-white/[0.02]">
+                        <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare className="w-4 h-4 text-lumina-primary" />
+                            <label className="text-xs font-medium text-lumina-muted uppercase tracking-wider">Comentarios / Observaciones</label>
+                        </div>
+                        <textarea 
+                            rows={3}
+                            className="w-full bg-lumina-bg border border-lumina-border rounded-lg p-3 text-sm text-white focus:ring-2 focus:ring-lumina-primary/50 outline-none resize-none placeholder:text-gray-600 transition-all"
+                            placeholder="Ej. Se entrega equipo con cargador original y funda de transporte..."
+                            value={comments}
+                            onChange={(e) => setComments(e.target.value)}
                         />
                     </div>
-                </div>
-
-                {/* Lista de Usuarios */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                    {isLoading ? (
-                        <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-lumina-primary"/></div>
-                    ) : users.length > 0 ? (
-                        users.map(user => {
-                            const isSelected = selectedUserId === user.id;
-                            return (
-                                <button
-                                    key={user.id}
-                                    onClick={() => setSelectedUserId(user.id)}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left group border ${
-                                        isSelected 
-                                        ? "bg-lumina-primary/10 border-lumina-primary/50 ring-1 ring-lumina-primary/50" 
-                                        : "bg-transparent border-transparent hover:bg-white/5"
-                                    }`}
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
-                                        isSelected ? "bg-lumina-primary text-white" : "bg-lumina-primary/10 text-lumina-primary"
-                                    }`}>
-                                        <UserIcon className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0"> {/* min-w-0 ayuda al truncado */}
-                                        <p className={`text-sm font-medium truncate ${isSelected ? "text-white" : "text-gray-200"}`}>
-                                            {user.full_name}
-                                        </p>
-                                        <p className="text-xs text-lumina-muted truncate">{user.email}</p>
-                                    </div>
-                                    {isSelected && <CheckCircle2 className="w-5 h-5 text-lumina-primary animate-in fade-in zoom-in duration-200 shrink-0"/>}
-                                </button>
-                            );
-                        })
-                    ) : (
-                        <div className="text-center py-8">
-                            <p className="text-lumina-muted text-sm">No se encontraron usuarios</p>
-                            {searchTerm && <p className="text-xs text-gray-600 mt-1">Intenta con otro término</p>}
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer */}

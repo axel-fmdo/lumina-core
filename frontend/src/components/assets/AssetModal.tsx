@@ -84,9 +84,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
     };
 
     // Cargar categorías y/o el activo al abrir el modal
-    useEffect(() => {
-
-        
+    useEffect(() => {        
         let isMounted = true;
 
         api.get("/categories/select").then((res) => {
