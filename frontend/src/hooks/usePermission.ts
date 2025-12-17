@@ -5,10 +5,12 @@ export const usePermission = () => {
   const { user } = useSelector((state: RootState) => state.auth);
 
   /**
-   * Verifica si el usuario tiene un permiso específico.
-   * @param permissionSlug El slug del permiso a validar (ej: 'users_create')
-   * @returns true si tiene el permiso o es Super Admin
+   * Parámetros a usar para validar si tiene los permisos el usuario
+   * @param permissionSlug
+   * @returns 
    */
+  
+  // Método que valida si tiene el permiso proporcionado
   const hasPermission = (permissionSlug: string): boolean => {
     if (!user) return false;
 
@@ -18,23 +20,25 @@ export const usePermission = () => {
     return user.permissions.includes(permissionSlug);
   };
 
-  /**
-   * Verifica si tiene AL MENOS UNO de los permisos en una lista.
-   */
+  // Método que valida si tiene algunos de los permisos proporcionados
   const hasAnyPermission = (permissions: string[]): boolean => {
     if (!user) return false;
+
+    // Si es Super Admin, siempre tiene permiso
     if (user.roles.includes('Super Admin')) return true;
     
     return permissions.some(p => user.permissions.includes(p));
   };
 
+  // Método que valida si tiene todos los permisos proporcionado
   const hasAllPermissions = (permissions: string[]): boolean => {
     if (!user) return false;
+
+    // Si es Super Admin, siempre tiene permiso
     if (user.roles.includes('Super Admin')) return true;
     
     return permissions.every(p => user.permissions.includes(p));
   };
 
-  // Retornamos también el usuario por si necesitamos mostrar el nombre
   return { hasPermission, hasAnyPermission, hasAllPermissions, user };
 };

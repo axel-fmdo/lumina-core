@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta de colores insignia "Lumina": Oscura, técnica y elegante
+        // Paleta de colores insignia "Lumina"
         lumina: {
           bg: "#0f172a",       // Fondo principal (Slate 950)
           surface: "#1e293b",  // Tarjetas/Paneles (Slate 800)
@@ -20,7 +20,7 @@ export default {
           accent: "#06b6d4",   // Cyan 500
         },
       },
-      // Animaciones personalizadas para Framer/Tailwind
+      // Animaciones personalizadas
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
         "slide-in": "slideIn 0.3s ease-out",

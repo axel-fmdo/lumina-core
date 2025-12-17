@@ -17,21 +17,12 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [comments, setComments] = useState("");
 
-    // EFECTO DE BÚSQUEDA INTELIGENTE (Server-Side)
+    // Efecto de búsqueda para los usuarios
     useEffect(() => {
-        // Creamos un temporizador para no llamar a la API por cada letra (Debounce)
         const delayDebounceFn = setTimeout(async () => {
             setIsLoading(true);
             try {
-                // Pasamos el término de búsqueda al backend
-                // Si searchTerm está vacío, el backend devolverá los primeros 10 por defecto
-                const { data } = await api.get("/users/", {
-                    params: {
-                        skip: 0,
-                        limit: 5, // Traemos solo 5 resultados para ser eficientes
-                        search: searchTerm || undefined // Solo enviamos si hay texto
-                    }
-                });
+                const { data } = await api.get("/users/", { params: { skip: 0, limit: 5, search: searchTerm || undefined }});
                 
                 if (data && Array.isArray(data.data)) {
                     setUsers(data.data);
@@ -45,11 +36,11 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
             } finally {
                 setIsLoading(false);
             }
-        }, 300); // Espera 300ms después de que dejes de escribir
+        }, 300);
 
-        // Limpieza: si escribes rápido, cancela el temporizador anterior
+        
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm]); // Se ejecuta cada vez que cambia searchTerm
+    }, [searchTerm]);
 
     const handleConfirm = () => {
         if (selectedUserId) {
@@ -71,16 +62,16 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                 transition={{ duration: 0.2, ease: easeInOut }}
                 className="relative w-full max-w-md bg-lumina-surface border border-lumina-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
             >
-                {/* Header */}
+                {/* CABECERA */}
                 <div className="p-4 border-b border-lumina-border bg-white/5 flex justify-between items-center shrink-0">
                     <h3 className="text-lg font-semibold text-white">Asignar a...</h3>
                     <button onClick={onClose} className="text-lumina-muted hover:text-white"><X className="w-5 h-5"/></button>
                 </div>
 
-                {/* Body: Contenedor Scrollable */}
+                {/* CUERPO DEL MODAL */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                     
-                    {/* 1. Buscador */}
+                    {/* BUSCADOR */}
                     <div className="p-4 pb-2 shrink-0">
                         <label className="text-xs font-medium text-lumina-muted mb-1.5 block uppercase tracking-wider">Buscar Usuario</label>
                         <div className="relative">
@@ -96,7 +87,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                         </div>
                     </div>
 
-                    {/* 2. Lista de Usuarios (Altura fija o flexible pero limitada) */}
+                    {/* LISTA DE USUARIOS */}
                     <div className="px-2 space-y-1 min-h-[150px] max-h-[250px] overflow-y-auto custom-scrollbar border-b border-white/5 pb-2">
                         {isLoading ? (
                             <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-lumina-primary"/></div>
@@ -135,7 +126,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                         )}
                     </div>
 
-                    {/* 3. Área de Comentarios (Nueva) */}
+                    {/* COMENTARIOS */}
                     <div className="p-4 pt-4 shrink-0 bg-white/[0.02]">
                         <div className="flex items-center gap-2 mb-2">
                             <MessageSquare className="w-4 h-4 text-lumina-primary" />
@@ -151,7 +142,7 @@ export const UserSelectModal = ({ onClose, onSelect, isLoadingAction }: UserSele
                     </div>
                 </div>
 
-                {/* Footer */}
+                {/* BOTONES */}
                 <div className="p-4 border-t border-lumina-border bg-white/5 flex justify-end gap-3 shrink-0">
                     <button 
                         onClick={onClose} 

@@ -12,14 +12,7 @@ router = APIRouter(
     tags=["Categories"]
 )
 
-# Usaremos un esquema simple para el dropdown
-class CategoryDropdown(schemas.RoleBase):
-    id: schemas.UUID
-
-    class Config:
-        from_attributes = True
-
-# 1. GET ALL (Con búsqueda y paginación)
+# Listar todas las categorías o filtrarlas (Protegido con 'categories_read')
 @router.get("/", response_model=schemas.PaginatedResponse[schemas.CategoryResponse], dependencies=[Depends(PermissionChecker("categories_read"))])
 def read_categories(
     skip: int = 0, 
@@ -27,29 +20,49 @@ def read_categories(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    """
+    Obtiene la lista de las Categorías registradas. Se pueden especificar parámetros de filtrado con search (nombre)
+    """
+
+    # Se determina la consulta base
     query = db.query(models.Category)
     
+    # Si hay un parámetro de filtrado, se aplica
     if search:
         query = query.filter(models.Category.name.ilike(f"%{search}%"))
     
-    total = query.count()
+    try:
+        total = query.count()
 
-    categories = query.offset(skip).limit(limit).all()
+        categories = query.offset(skip).limit(limit).all()
+        
+        return {
+            "total": total,
+            "page": (skip // limit) + 1,
+            "limit": limit,
+            "data": categories
+        }
     
-    return {
-        "total": total,
-        "page": (skip // limit) + 1,
-        "limit": limit,
-        "data": categories
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener las Categorías.")
 
-# Método para obtener el listado de categorías para el Select
-@router.get("/select", response_model=List[CategoryDropdown])
-def read_categories(db: Session = Depends(get_db)):
-    # Traemos todos los roles para llenar selects
-    return db.query(models.Category).all()
+# Obtener todas las Categorías, respuesta personalizada para componentes Select en el Front
+@router.get("/select", response_model=List[schemas.CategoryDropdown], dependencies=[Depends(PermissionChecker("categories_read"))])
+def read_categories(
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene la lista de los Roles registrados. Respuesta para usar el componentes Select en el Front
+    """
 
-# --- MÉTODO AUXILIAR PARA VALIDACIÓN ---
+    try:
+        # Traemos todas las categorías para llenar selects
+        return db.query(models.Category).all()
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener las Categorías.")
+
+# Validar que el nombre que se pretente registrar a una categoría no esté registrado (Protegido con 'categories_read')
 @router.get("/validate-category-uniqueness", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("categories_read"))])
 def validate_category_name(
     name: str, 
@@ -57,86 +70,140 @@ def validate_category_name(
     db: Session = Depends(get_db) 
 ):
     """
-    Verifica que el nombre de la categoría sea único.
-    Si exclude_id se proporciona (en update), ignora ese registro al buscar duplicados.
+    Verifica que el nombre de la categoría sea único antes de realizar la creación/modificación del registro.
     """
+
+    # Se determina la consulta base
     query = db.query(models.Category).filter(models.Category.name == name)
     
-    existing_category = query.first()
+    try:
+        existing_category = query.first()
 
-    if category_id:
-        # Excluir la categoría actual si estamos editando
-        query = query.filter(models.Category.id != category_id)
-        
-    if existing_category:
-        raise HTTPException(
-            status_code=409,
-            detail="Una categoría con ese nombre ya se encuentra registrada."
-        )
-    return {"message": "Nombre de categoría disponible."}
+        if category_id:
+            # Excluir la categoría actual si estamos editando
+            query = query.filter(models.Category.id != category_id)
+            
+        # Se valida que no exista una categoría con ese nombre
+        if existing_category:
+            raise HTTPException(
+                status_code=409,
+                detail="Una categoría con ese nombre ya se encuentra registrada."
+            )
+        return {"message": "Nombre de categoría disponible."}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al validar el registro del nombre de la Categoría.")
 
-# 2. CREATE
+# Crear una categoría (Protegido con 'categories_create')
 @router.post("/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(PermissionChecker("categories_create"))])
-def create_category(category_in: schemas.CategoryCreate, response: Response,db: Session = Depends(get_db)):
+def create_category(
+    category_in: schemas.CategoryCreate, 
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Método para dar de alta un nuevo Rol.
+    """
 
-    # Se valida que el Nombre sea único
+    # Se determina la consulta base
     existing_name = db.query(models.Category).filter(models.Category.name == category_in.name).first()
+    
+    # Se valida que el nombre no esté registrado
     if existing_name:
         raise HTTPException(status_code=409, detail=f"Una categoría con el nombre '{category_in.name}' ya existe.")
     
-    new_category = models.Category(name=category_in.name)
-    db.add(new_category)
-    db.commit()
-    db.refresh(new_category)
+    try:
+        # Se asignan los datos del nuevo registro
+        new_category = models.Category(name=category_in.name)
 
-    response.headers["X-Process-Message"] = "Categoría registrada exitosamente."
+        # Se hace el proceso de guardado
+        db.add(new_category)
+        db.commit()
+        db.refresh(new_category)
 
-    return new_category
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Categoría registrada exitosamente."
 
-# 3. UPDATE
+        return new_category
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear la Categoría.")
+
+# Actualizar una categoría (Protegido con 'categories_update')
 @router.put("/{category_id}", response_model=schemas.CategoryResponse, dependencies=[Depends(PermissionChecker("categories_update"))])
-def update_category(category_id: str, category_data: schemas.CategoryUpdate, response: Response, db: Session = Depends(get_db)):
+def update_category(
+    category_id: str, 
+    category_data: schemas.CategoryUpdate, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    """
+    Método para actualizar una Categoría.
+    """
+
     # Se busca la categoría a actualizar
     category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    
+    #Se valida que exista la categoría
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
     
-    # 2. Validar Código Interno Único (solo si se está cambiando)
+    # Se valida que el nombre no esté en uso
     if category_data.name and category_data.name != category.name:
         existing = db.query(models.Category).filter(models.Category.name == category_data.name).first()
         if existing:
             raise HTTPException(status_code=409, detail=f"El nombre '{category_data.name}' ya está en uso.")
 
-    category.name = category_data.name
-    db.commit()
-    db.refresh(category)
+    try:
+        # Se hace la asingación de nuevos datos
+        category.name = category_data.name
 
-    response.headers["X-Process-Message"] = "Activo actualizado correctamente."
+        #Se hace el proceso de guardado
+        db.commit()
+        db.refresh(category)
 
-    return category
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Activo actualizado correctamente."
 
-# 4. DELETE
+        return category
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar la Categoría.")
+
+# Elimina una categoría (Protegido con 'categories_delete')
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(PermissionChecker("categories_delete"))])
-def delete_category(category_id: str, response: Response, db: Session = Depends(get_db)):
-    # 1. Buscar la categoría
+def delete_category(
+    category_id: str, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    # Se establece la consulta base
     category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    
+    # Se valida que exista la categoría
     if not category:
-        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+        raise HTTPException(status_code=404, detail="Categoría no encontrada.")
     
-    # 2. VALIDACIÓN DE INTEGRIDAD REFERENCIAL (Protección)
-    # Verificamos si existen activos que apunten a este category_id
+    # Se valida que la categoría a eliminar no esté en uso
     assets_count = db.query(models.Asset).filter(models.Asset.category_id == category_id).count()
-    
     if assets_count > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
             detail=f"No se puede eliminar la categoría porque tiene {assets_count} activos asociados. Por favor, reasigna o elimina esos activos primero."
         )
 
-    # 3. Si pasa la validación, procedemos a borrar
-    db.delete(category)
-    db.commit()
+    try:
+        # Se realiza el proceso de borrado
+        db.delete(category)
+        db.commit()
 
-    response.headers["X-Process-Message"] = "La categoría ha sido dado de baja correctamente."
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "La Categoría ha sido dado de baja correctamente."
+        
+        return {"message": "Categoría dada de baja"}
     
-    return {"message": "Activo dado de baja"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar la Categoría.")

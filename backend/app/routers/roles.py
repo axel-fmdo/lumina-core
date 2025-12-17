@@ -8,14 +8,7 @@ from app.core.deps import PermissionChecker
 
 router = APIRouter(prefix="/roles", tags=["Roles"])
 
-# Usaremos un esquema simple para el dropdown
-class RoleDropdown(schemas.RoleBase):
-    id: schemas.UUID
-
-    class Config:
-        from_attributes = True
-
-# 1. GET ALL (Tabla Principal)
+# Listar todos los roles o filtrarlos (Protegido con 'roles_read')
 @router.get("/", response_model=schemas.PaginatedResponse[schemas.RoleResponse], dependencies=[Depends(PermissionChecker("roles_read"))])
 def read_roles(
     skip: int = 0, 
@@ -23,28 +16,46 @@ def read_roles(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Usamos joinedload para traer los permisos y mostrarlos en la tabla (ej: "Tiene 5 permisos")
+    """
+    Obtiene la lista de los Roles registrados. Se pueden especificar parámetros de filtrado con search (nombre)
+    """
+
+    # Se realiza la consulta base con joinedload para traer los permisos de cada ron y mandarlos en la respuesta
     query = db.query(models.Role).options(joinedload(models.Role.permissions))
     
-    if search:
-        query = query.filter(models.Role.name.ilike(f"%{search}%"))
+    try:
+        if search:
+            query = query.filter(models.Role.name.ilike(f"%{search}%"))
+            
+        total = query.count()
+        roles = query.offset(skip).limit(limit).all()
         
-    total = query.count()
-    roles = query.offset(skip).limit(limit).all()
+        return {
+            "total": total,
+            "page": (skip // limit) + 1,
+            "limit": limit,
+            "data": roles
+        }
     
-    return {
-        "total": total,
-        "page": (skip // limit) + 1,
-        "limit": limit,
-        "data": roles
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener los Roles.")
 
-@router.get("/select", response_model=List[RoleDropdown])
-def read_roles(db: Session = Depends(get_db)):
-    # Traemos todos los roles para llenar selects
-    return db.query(models.Role).all()
+# Obtener todos los Roles, respuesta personalizada para componentes Select en el Front
+@router.get("/select", response_model=List[schemas.RoleDropdown], dependencies=[Depends(PermissionChecker("roles_read"))])
+def read_roles(
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene la lista de los Roles registrados. Respuesta para usar el componentes Select en el Front
+    """
+    try:
+        # Traemos todos los roles para llenar selects
+        return db.query(models.Role).all()
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener los Roles.")
 
-# --- MÉTODO AUXILIAR PARA VALIDACIÓN ---
+# Validar que el nombre que se pretente registrar a un rol no esté registrado (Protegido con 'roles_read')
 @router.get("/validate-role-uniqueness", dependencies=[Depends(PermissionChecker("roles_read"))], status_code=status.HTTP_200_OK)
 def validate_category_name(
     name: str, 
@@ -52,77 +63,127 @@ def validate_category_name(
     db: Session = Depends(get_db) 
 ):
     """
-    Verifica que el nombre del rol sea único.
-    Si exclude_id se proporciona (en update), ignora ese registro al buscar duplicados.
+    Verifica que el nombre del rol sea único antes de realizar la creación/modificación del registro.
     """
+
+    # Se determina la consulta base
     query = db.query(models.Role).filter(models.Role.name == name)
     
-    existing_category = query.first()
+    try:
+        existing_category = query.first()
 
-    if role_id:
-        # Excluir el rol actual si estamos editando
-        query = query.filter(models.Role.id != role_id)
-        
-    if existing_category:
-        raise HTTPException(
-            status_code=409,
-            detail="Un Rol con ese nombre ya se encuentra registrado."
-        )
-    return {"message": "Nombre de Rol disponible."}
-
-@router.get("/permissions", response_model=List[schemas.PermissionResponse])
-def read_all_permissions_catalog(db: Session = Depends(get_db)):
-    """Retorna TODOS los permisos disponibles para pintar la matriz"""
-    return db.query(models.Permission).all()
-
-# 2. CREATE ROLE (Solo nombre y descripción)
-@router.post("/", response_model=schemas.RoleResponse, dependencies=[Depends(PermissionChecker("roles_create"))], status_code=status.HTTP_201_CREATED)
-def create_role(role_in: schemas.RoleCreate, response: Response, db: Session = Depends(get_db)):
+        if role_id:
+            # Excluir el rol actual si se está editando
+            query = query.filter(models.Role.id != role_id)
+            
+        # Validar que no exista ya un rol con ese nombre
+        if existing_category:
+            raise HTTPException(
+                status_code=409,
+                detail="Un Rol con ese nombre ya se encuentra registrado."
+            )
+        return {"message": "Nombre de Rol disponible."}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al validar el registro del nombre del Rol.")
+
+# Obtener todos los permisos registrados en el sistema como parte del tratamiento de actualización de los accesos de un rol
+@router.get("/permissions", response_model=List[schemas.PermissionResponse], dependencies=[Depends(PermissionChecker("roles_read"))])
+def read_all_permissions_catalog(
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna todos los permisos existentes del sistema
+    """
+
+    try:
+        return db.query(models.Permission).all()
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener los Permisos.")
+
+# Crear un rol (Protegido con 'roles_create')
+@router.post("/", response_model=schemas.RoleResponse, dependencies=[Depends(PermissionChecker("roles_create"))], status_code=status.HTTP_201_CREATED)
+def create_role(
+    role_in: schemas.RoleCreate, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    """
+    Método para dar de alta un nuevo Rol.
+    """
+
+    # Se determina la consulta base
     existing_name = db.query(models.Role).filter(models.Role.name == role_in.name).first()
+    
+    # Se valida que el nombre no esté registrado
     if existing_name:
         raise HTTPException(status_code=409, detail=f"Un Rol con el nombre '{role_in.name}' ya existe.")
     
-    # Crear objeto (sin permisos, nace vacío)
-    new_role = models.Role(
-        name=role_in.name, 
-        description=role_in.description
-    )
+    try:
+        # Se crea el objeto con los datos del nuevo rol (sin permisos)
+        new_role = models.Role(
+            name=role_in.name, 
+            description=role_in.description
+        )
+        
+        # Se hace el proceso de guardado
+        db.add(new_role)
+        db.commit()
+        db.refresh(new_role)
+
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Rol registrado exitosamente."
+
+        return new_role
     
-    db.add(new_role)
-    db.commit()
-    db.refresh(new_role)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al guardar el Rol.")
 
-    response.headers["X-Process-Message"] = "Rol registrado exitosamente."
-
-    return new_role
-
-# 3. UPDATE ROLE BASIC INFO (Solo nombre y descripción)
+# Actualizar un rol (Protegido con 'roles_update')
 @router.put("/{role_id}", response_model=schemas.RoleResponse, dependencies=[Depends(PermissionChecker("roles_update"))])
-def update_role(role_id: str, role_in: schemas.RoleUpdate, response: Response, db: Session = Depends(get_db)):
-    
+def update_role(
+    role_id: str, 
+    role_in: schemas.RoleUpdate, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    """
+    Método para actualizar un Rol.
+    """
+
+    # Se determina la consulta base
     role = db.query(models.Role).filter(models.Role.id == role_id).first()
     if not role:
-        raise HTTPException(status_code=404, detail="Rol no encontrado")
+        raise HTTPException(status_code=404, detail="Rol no encontrado.")
         
-    # Validar duplicado solo si cambió el nombre
+    # Se valida que el nombre nuevo no esté registrado
     existing_name = db.query(models.Role).filter(models.Role.name == role_in.name).first()
     if existing_name:
         raise HTTPException(status_code=409, detail=f"Un Rol con el nombre '{role_in.name}' ya existe.")
         
-    if role_in.name:
-        role.name = role_in.name
-    if role_in.description is not None:
-        role.description = role_in.description
+    try:
+        # Se realiza la actualizacoón de datos
+        if role_in.name:
+            role.name = role_in.name
+        if role_in.description is not None:
+            role.description = role_in.description
+        
+         # Se hace el proceso de guardado
+        db.commit()
+        db.refresh(role)
+
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Rol actualizado correctamente."
+
+        return role
     
-    db.commit()
-    db.refresh(role)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar el Rol.")
 
-    response.headers["X-Process-Message"] = "Rol actualizado correctamente."
-
-    return role
-
-# 3.1 UPDATE ROLE ADVANCE INFO (Permisos del rol)
+# Actualizar los permisos un rol (Protegido con 'roles_update')
 @router.put("/{role_id}/permissions", response_model=schemas.RoleResponse, dependencies=[Depends(PermissionChecker("roles_update"))])
 def update_role_permissions(
     role_id: str, 
@@ -131,51 +192,78 @@ def update_role_permissions(
     db: Session = Depends(get_db)
 ):
     """
-    Recibe una lista de slugs (ej: ['users_read', 'assets_create']).
-    Borra los permisos anteriores del rol y asigna SOLO los que vienen en la lista.
+    Método para actualizar los permisos de un Rol. Recibe el arreglo de permisos.
     """
-    # 1. Buscar el Rol
+
+    # Se determina la consulta base
     role = db.query(models.Role).filter(models.Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="Rol no encontrado")
-
-    # 2. Buscar los objetos Permission correspondientes a los slugs recibidos
-    new_permissions = db.query(models.Permission).filter(
-        models.Permission.slug.in_(payload.permissions)
-    ).all()
-
-    # 3. Verificar si algún slug enviado no existe (Opcional, pero buena práctica)
-    if len(new_permissions) != len(payload.permissions):
-        pass
-
-    # 4. Asignación de permisos con relación en la tabla pivote
-    role.permissions = new_permissions
-
-    db.commit()
-    db.refresh(role) # Recargar para devolver el objeto con los permisos actualizados
-
-    response.headers["X-Process-Message"] = "Los permisos del Rol se actualizaron correctamente."
-
-    return role
-
-# 4. DELETE ROLE
-@router.delete("/{role_id}",dependencies=[Depends(PermissionChecker("roles_delete"))], status_code=status.HTTP_204_NO_CONTENT)
-def delete_role(role_id: str, response: Response, db: Session = Depends(get_db)):
-    role = db.query(models.Role).filter(models.Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="Rol no encontrado")
     
-    # Validación de Integridad: No borrar si hay usuarios usándolo
-    users_count = db.query(models.User).filter(models.User.roles.any(id=role_id)).count()
-    if users_count > 0:
-         raise HTTPException(
-             status_code=status.HTTP_409_CONFLICT, 
-             detail=f"No se puede eliminar: hay {users_count} usuarios asignados a este Rol."
-         )
+    # Se valida que exista el rol
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado.")
 
-    db.delete(role)
-    db.commit()
+    try:
+        # Se obtienen todos los permisos existentes
+        new_permissions = db.query(models.Permission).filter(
+            models.Permission.slug.in_(payload.permissions)
+        ).all()
 
-    response.headers["X-Process-Message"] = "El Rol ha sido dado de baja correctamente."
+        # Se valida que no haya permisos adicionales no registrados
+        if len(new_permissions) != len(payload.permissions):
+            pass
 
-    return None
+        # Se asigna el nuevo set de permisos al rol
+        role.permissions = new_permissions
+
+        # Se hace el proceso de guardado
+        db.commit()
+        db.refresh(role)
+
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Los permisos del Rol se actualizaron correctamente."
+
+        return role
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar los permisos del Rol.")
+
+# Elimina un rol (Protegido con 'roles_delete')
+@router.delete("/{role_id}",dependencies=[Depends(PermissionChecker("roles_delete"))], status_code=status.HTTP_204_NO_CONTENT)
+def delete_role(
+    role_id: str, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    """
+    Método para eliminar un Rol.
+    """
+
+    # Se determina la consulta base
+    role = db.query(models.Role).filter(models.Role.id == role_id).first()
+    
+    # Se valida que exista el rol
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado.")
+    
+    try:
+        # Se valida que el rol no esté en uso
+        users_count = db.query(models.User).filter(models.User.roles.any(id=role_id)).count()
+        if users_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, 
+                detail=f"No se puede eliminar: hay {users_count} usuarios asignados a este Rol."
+            )
+
+        # Se realiza la eliminación
+        db.delete(role)
+        db.commit()
+
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "El Rol ha sido dado de baja correctamente."
+
+        return None
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar el Rol.")

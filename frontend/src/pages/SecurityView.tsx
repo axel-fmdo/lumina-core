@@ -1,47 +1,40 @@
 import { useState, useEffect, useMemo } from "react";
 import api from "../lib/axios";
-import { Role, Permission } from "../types"; // Asegúrate de tener Permission en tus types
+import { Role, Permission } from "../types";
 import { Shield, AlertTriangle, ChevronDown, Save, CheckCircle2, Lock } from "lucide-react";
 
 export const SecurityView = () => {
-    // --- ESTADOS ---
     const [roles, setRoles] = useState<Role[]>([]);
-    const [allPermissions, setAllPermissions] = useState<Permission[]>([]); // Catálogo maestro
+    const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
     
-    const [selectedRoleId, setSelectedRoleId] = useState(""); // Usamos ID, no nombre
-    const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]); // Los checks activos
+    const [selectedRoleId, setSelectedRoleId] = useState("");
+    const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    // --- 1. CARGA INICIAL (Roles y Catálogo de Permisos) ---
+    // Efecto de carga con los roles y los permisos
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [rolesPaginatedRes, permsRes] = await Promise.all([
-                    // 1. Usamos el endpoint paginado que SÍ trae permisos
                     api.get("/roles/", { params: { limit: 100 } }), 
-                    
-                    // 2. El catálogo maestro que acabamos de agregar en el Back
                     api.get("/roles/permissions") 
                 ]);
                 
-                // --- AJUSTE CLAVE AQUÍ ---
-                // Como viene paginado, la lista real está dentro de .data.data
-                // Verificamos si existe data.data (estructura paginada) o solo data (lista simple)
                 const rolesList = rolesPaginatedRes.data.data || rolesPaginatedRes.data;
                 
                 setRoles(rolesList); 
                 setAllPermissions(permsRes.data);
                 
             } catch (error) {
-                console.error("Error inicializando seguridad:", error);
+                console.error("Error inicializando seguridad: ", error);
             }
         };
         fetchData();
     }, []);
 
-    // --- 2. MANEJAR CAMBIO DE ROL ---
+    // Función para manejar los cambios en el selector de roles
     const handleRoleChange = (roleId: string) => {
         setSelectedRoleId(roleId);
         
@@ -52,7 +45,6 @@ export const SecurityView = () => {
 
         const role = roles.find(r => r.id === roleId);
         
-        // Ahora role.permissions SÍ existirá porque viene del endpoint paginado
         if (role && role.permissions) {
             const currentPerms = role.permissions.map(p => p.slug);
             setSelectedSlugs(currentPerms);
@@ -61,7 +53,7 @@ export const SecurityView = () => {
         }
     };
 
-    // --- 3. LOGICA DE CHECKBOX (Toggle) ---
+    // Método para cambiar el estado de cada uno de los checks de los permisos
     const togglePermission = (slug: string) => {
         setSelectedSlugs(prev => {
             if (prev.includes(slug)) {
@@ -72,33 +64,31 @@ export const SecurityView = () => {
         });
     };
 
-    // --- 4. GUARDAR CAMBIOS ---
+    // Función para salvar los cambios
     const handleSave = async () => {
         if (!selectedRoleId) return;
         setSaving(true);
         try {
-            // Enviamos la lista de slugs al backend
             const payload = { permissions: selectedSlugs };
             const res = await api.put(`/roles/${selectedRoleId}/permissions`, payload);
             
-            // Actualizamos el rol en el estado local para reflejar los cambios sin recargar
+            // Se actualiza el rol en el estado local para reflejar los cambios sin recargar
             setRoles(prevRoles => prevRoles.map(r => 
                 r.id === selectedRoleId ? res.data : r
             ));
             
         } catch (error) {
-            console.error("Error guardando permisos:", error);
+            console.error("Error guardando permisos: ", error);
         } finally {
             setSaving(false);
         }
     };
 
-    // --- 5. AGRUPACIÓN DE PERMISOS (Memoizado) ---
-    // Esto toma "users_read", "assets_create" y los agrupa en "USERS", "ASSETS"
+    // Agrupación de permisos por módulo
     const groupedPermissions = useMemo(() => {
         const groups: Record<string, Permission[]> = {};
         allPermissions.forEach(p => {
-            const key = p.slug.split('_')[0].toUpperCase(); // Ej: 'USERS'
+            const key = p.slug.split('_')[0].toUpperCase();
             if (!groups[key]) groups[key] = [];
             groups[key].push(p);
         });
@@ -106,9 +96,9 @@ export const SecurityView = () => {
     }, [allPermissions]);
 
     return (
-        <div className="space-y-6 pb-20"> {/* pb-20 para espacio del botón flotante */}
+        <div className="space-y-6 pb-20">
             
-            {/* --- HEADER (Tu código original con ajustes) --- */}
+            {/* CABECERA */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/10 pb-6">
                 <div className="flex items-center gap-3">
                     <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
@@ -142,9 +132,9 @@ export const SecurityView = () => {
                 </div>
             </div>
 
-            {/* --- CONTENIDO PRINCIPAL --- */}
+            {/* CONTENIDO DE LA VISTA */}
             {!selectedRoleId ? (
-                // ESTADO VACÍO (Sin selección)
+                // SIN ROL SELECCIONADO
                 <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-white/5 rounded-2xl bg-white/[0.02]">
                     <div className="p-4 bg-white/5 rounded-full mb-4">
                         <Lock className="w-8 h-8 text-gray-500" />
@@ -153,7 +143,7 @@ export const SecurityView = () => {
                     <p className="text-gray-500 max-w-sm mt-1">Selecciona un rol del menú superior para visualizar y editar sus permisos de acceso.</p>
                 </div>
             ) : (
-                // GRID DE PERMISOS (Con animación simple)
+                // CON ROL SELECCIONADO
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {Object.entries(groupedPermissions).map(([groupName, permissions]) => (
                         <div key={groupName} className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden flex flex-col">
@@ -165,7 +155,7 @@ export const SecurityView = () => {
                                 </span>
                             </div>
                             
-                            {/* Lista de Switches */}
+                            {/* LISTA DE PERMISOS */}
                             <div className="p-4 space-y-3 flex-1">
                                 {permissions.map(perm => {
                                     const isChecked = selectedSlugs.includes(perm.slug);
@@ -181,11 +171,11 @@ export const SecurityView = () => {
                                             <div className="relative flex items-center mt-0.5">
                                                 <input 
                                                     type="checkbox"
-                                                    className="peer sr-only" // Ocultamos el checkbox nativo
+                                                    className="peer sr-only"
                                                     checked={isChecked}
                                                     onChange={() => togglePermission(perm.slug)}
                                                 />
-                                                {/* Checkbox personalizado */}
+                                                {/* CHECKBOX */}
                                                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
                                                     isChecked 
                                                         ? "bg-indigo-500 border-indigo-500 text-white" 
@@ -211,7 +201,7 @@ export const SecurityView = () => {
                 </div>
             )}
 
-            {/* --- BARRA FLOTANTE DE GUARDADO --- */}
+            {/* BOTÓN DE GUARDADO FLOTANTE */}
             {selectedRoleId && (
                 <div className="fixed bottom-6 right-6 z-10 animate-in slide-in-from-bottom-10">
                     <button

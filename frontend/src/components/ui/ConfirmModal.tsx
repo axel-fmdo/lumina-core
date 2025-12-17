@@ -1,5 +1,5 @@
-import { motion, AnimatePresence, easeInOut } from "framer-motion";
-import { AlertTriangle, Info, Trash2, X } from "lucide-react"; // Importamos más iconos
+import { motion, easeInOut } from "framer-motion";
+import { AlertTriangle, Info, Trash2, X } from "lucide-react";
 
 interface ConfirmModalProps {
   onClose: () => void;
@@ -23,20 +23,20 @@ export const ConfirmModal = ({
   isLoading = false
 }: ConfirmModalProps) => {
 
-  // LÓGICA DE ESTILOS CENTRALIZADA
+  // Estilos del modal
   const styles = {
     danger: {
       border: "border-red-500/30",
       bar: "bg-red-500",
       iconBg: "bg-red-500/10 text-red-500",
       button: "bg-red-500 hover:bg-red-600 shadow-red-500/20",
-      icon: <Trash2 className="w-6 h-6" /> // Icono específico para borrar
+      icon: <Trash2 className="w-6 h-6" />
     },
     warning: {
       border: "border-amber-500/30",
       bar: "bg-amber-500",
       iconBg: "bg-amber-500/10 text-amber-500",
-      button: "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20", // Texto negro para contraste en amarillo
+      button: "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20",
       icon: <AlertTriangle className="w-6 h-6" />
     },
     info: {
@@ -71,17 +71,17 @@ export const ConfirmModal = ({
               transition={{ duration: 0.2, ease: easeInOut }}
               className={`relative w-full max-w-md overflow-hidden rounded-2xl border bg-lumina-surface shadow-2xl ${currentStyle.border}`}
           >
-            {/* Header Visual */}
+            {/* CABECERA */}
             <div className={`h-2 w-full ${currentStyle.bar}`} />
 
             <div className="p-6">
                 <div className="flex items-start gap-4">
-                    {/* Icono Dinámico */}
+                    {/* ÍCONO */}
                     <div className={`p-3 rounded-full shrink-0 ${currentStyle.iconBg}`}>
                         {currentStyle.icon}
                     </div>
 
-                    {/* Textos */}
+                    {/* TEXTO */}
                     <div className="flex-1">
                         <h3 className="text-lg font-semibold text-white">
                             {title}
@@ -91,13 +91,13 @@ export const ConfirmModal = ({
                         </p>
                     </div>
                     
-                    {/* Botón Cerrar */}
+                    {/* BOTÓN PARA CERRARr */}
                     <button onClick={onClose} className="text-lumina-muted hover:text-white transition-colors" disabled={isLoading}>
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Footer */}
+                {/* BOTONES */}
                 <div className="mt-8 flex justify-end gap-3">
                     <button
                         onClick={onClose}

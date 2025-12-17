@@ -10,9 +10,7 @@
 }
 
 @layer components {
-  /* Clase maestra para el efecto GLASSMORPHISM 
-     Para usar en Sidebars, Modales y Cards flotantes.
-  */
+  /* Efecto Glass para usar en diversos elementos del sistema */
   .glass-panel {
     @apply bg-lumina-surface/70 backdrop-blur-md border border-lumina-border/50 shadow-xl;
   }

@@ -27,7 +27,7 @@ export const ReturnAssetModal = ({ asset, onClose, onConfirm, isLoading }: Retur
                 transition={{ duration: 0.2, ease: easeInOut }}
                 className="relative w-full max-w-md bg-lumina-surface border border-lumina-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
             >
-                {/* Header */}
+                {/* CABECERA */}
                 <div className="p-4 border-b border-lumina-border bg-white/5 flex justify-between items-center">
                     <div className="flex items-center gap-2 text-white">
                         <CornerDownLeft className="w-5 h-5 text-amber-500" />
@@ -36,9 +36,9 @@ export const ReturnAssetModal = ({ asset, onClose, onConfirm, isLoading }: Retur
                     <button onClick={onClose} className="text-lumina-muted hover:text-white"><X className="w-5 h-5"/></button>
                 </div>
 
-                {/* Body */}
+                {/* CUERPO */}
                 <div className="p-6 space-y-4">
-                    {/* Alerta Visual */}
+                    {/* ALERTA VISUAL */}
                     <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg flex gap-3">
                         <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                         <div className="space-y-1">
@@ -49,7 +49,7 @@ export const ReturnAssetModal = ({ asset, onClose, onConfirm, isLoading }: Retur
                         </div>
                     </div>
 
-                    {/* Comentarios */}
+                    {/* COMENTARIOS */}
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <MessageSquare className="w-4 h-4 text-lumina-primary" />
@@ -66,7 +66,7 @@ export const ReturnAssetModal = ({ asset, onClose, onConfirm, isLoading }: Retur
                     </div>
                 </div>
 
-                {/* Footer */}
+                {/* BOTONES */}
                 <div className="p-4 border-t border-lumina-border bg-white/5 flex justify-end gap-3">
                     <button 
                         onClick={onClose} 

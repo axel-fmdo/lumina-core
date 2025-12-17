@@ -6,7 +6,7 @@ interface UserProfile {
   email: string;
   full_name: string;
   roles: string[];
-  permissions: string[]; // <--- Aquí vivirán los slugs
+  permissions: string[];
 }
 
 interface AuthState {
@@ -54,7 +54,7 @@ const authSlice = createSlice({
       localStorage.removeItem('token');
     },
   },
-  // Aquí se maneja el ciclo de vida de la petición asíncrona
+  // Manejo del ciclo de vida de la petición asíncrona
   extraReducers: (builder) => {
     builder
       .addCase(fetchUserProfile.pending, (state) => {

@@ -30,7 +30,7 @@ export const RolesView = () => {
             setRoles(data.data);
             setTotalRoles(data.total);
             } catch (error) {
-            console.error("Error cargando roles", error);
+            console.error("Error cargando roles: ", error);
         } finally {
             setLoading(false);
         }
@@ -40,7 +40,7 @@ export const RolesView = () => {
         fetchRoles();
     }, [apiParams.skip, apiParams.limit, apiParams.search]);
 
-    //Función para ejecutr el borrado
+    //Función para ejecutar el borrado de un rol
     const handleDeleteRole = async () => {
         if(!roleToDelete) return;
 
@@ -50,7 +50,7 @@ export const RolesView = () => {
             
             if(response){
                 setRoleToDelete(null);
-                fetchRoles(); // Recargar la lista
+                fetchRoles();
             }
         } catch (error) {
             console.error("Error al eliminar el rol: ", error);
@@ -59,12 +59,13 @@ export const RolesView = () => {
         }
     };
 
+    // Función para cerrar modales
     const closeModals = () => {
         setIsCreateModalOpen(false);
         setRoleToEdit(null);
     }
 
-    // Definición de columnas para la tabla
+    // Definición de columnas para la tabla Roles
     const columns: Column<RoleData>[] = [
         { 
             header: "Nombre", 
@@ -133,7 +134,7 @@ export const RolesView = () => {
                 )}
             </div>
 
-            {/* Barra de Herramientas */}
+            {/* BARRA CON BUSCADOR */}
             <DataToolbar
                 placeholder="Buscar rol..."
                 searchTerm={search} 
@@ -143,10 +144,10 @@ export const RolesView = () => {
             </DataToolbar>
 
             <div className="flex flex-col shadow-2xl rounded-xl">
-                {/* Tabla */}
+                {/* TaABLA */}
                 <Table data={roles} columns={columns} isLoading={loading} />
 
-                {/* 6. Paginador */}
+                {/* PAGINADOR */}
                 <Pagination 
                     total={totalRoles}
                     page={page}
@@ -156,27 +157,27 @@ export const RolesView = () => {
                 />
             </div>
 
-            {/* Modal para crear un usuario */}
+            {/* MODAL PARA CREAR UN ROL */}
             {<AnimatePresence mode="wait">
                 {(isCreateModalOpen || !!roleToEdit) && (
                     <RoleModal
                         onClose={closeModals}
                         onSuccess={() => {
-                            fetchRoles(); // Recargar la tabla
+                            fetchRoles();
                         }}
                         roleToEdit={roleToEdit}
                     />
                 )}
             </AnimatePresence>}
 
-            {/* Modal para eliminar un usuario */}
+            {/* MODAL PARA ELIMINAR UN ROL */}
             <AnimatePresence mode="wait">
                 {(!!roleToDelete) && (
                     <ConfirmModal
                         onClose={() => setRoleToDelete(null)}
                         onConfirm={handleDeleteRole}
                         title="Eliminar Rol"
-                        description={`¿Estás seguro de que deseas eliminar el rol "${roleToDelete?.name}"? Esta acción no se puede deshacer.`}
+                        description={`¿Estás seguro de que deseas eliminar el Rol "${roleToDelete?.name}"? Esta acción no se puede deshacer.`}
                         confirmText="Sí, eliminar"
                         variant="danger"
                         isLoading={isDeleting}

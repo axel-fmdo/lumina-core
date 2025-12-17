@@ -1,4 +1,4 @@
-//Interfaz para los usuarios
+// Interfaz para los usuarios
 export interface User {
   id: string;
   email: string;
@@ -8,7 +8,7 @@ export interface User {
   created_at?: string;
 }
 
-//Interfaz para los permisos
+// Interfaz para los permisos
 export interface Permission {
   id: string;
   name: string;
@@ -16,7 +16,7 @@ export interface Permission {
   description: string;
 }
 
-//Interfaz para los roles
+// Interfaz para los roles
 export interface Role {
   id: string;
   name: string;
@@ -24,14 +24,14 @@ export interface Role {
   permissions: Permission[];
 }
 
-//Interfaz para el formulario de creción base de permisos
+// Interfaz para el formulario de creción base de permisos
 export interface RoleData {
   id: string;
   name: string;
   description: string;
 }
 
-//Opciones de estado para los Activos
+// Opciones de estado para los Activos
 export enum AssetStatus {
   AVAILABLE = "Disponible",
   ASSIGNED = "Asignado",
@@ -39,22 +39,21 @@ export enum AssetStatus {
   RETIRED = "De Baja"
 }
 
-//Interfaz de respuesta para Asset
+// Interfaz de respuesta para Asset
 export interface UserSimple {
     id: string;
     full_name: string;
     email: string;
 }
 
-//Interfaz para las Categorías
+// Interfaz para las Categorías
 export interface Category {
   id: string;
   name: string;
   created_at?: string;
-  // Agrega otros campos si los tienes
 }
 
-//Interfaz para los Activos
+// Interfaz para los Activos
 export interface Asset {
   id: string;
   name: string;
@@ -70,9 +69,11 @@ export interface Asset {
   created_at: string;
 }
 
+// Interfaz para el Historial de Movimientos de los Activos
 export interface AssetHistory {
     id: string;
-    action_type: string; // "Asignación", "Devolución", etc.
+    action_type: string;
+    asset?: Asset;
     comments?: string;
     created_at: string;
     assigned_to?: {
@@ -85,4 +86,17 @@ export interface AssetHistory {
         full_name: string;
         email: string;
     };
+}
+
+// Interfaz para los datos del Dashboard
+export interface DashboardData {
+  stats: {
+    total_assets: number;
+    total_value: number;
+    assigned_count: number;
+    available_count: number;
+    maintenance_count: number;
+  };
+  category_distribution: { name: string; count: number; value: number }[];
+  recent_activity: AssetHistory[];
 }

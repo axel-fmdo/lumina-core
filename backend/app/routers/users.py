@@ -30,7 +30,7 @@ def read_users_me(current_user: models.User = Depends(get_current_user)):
         "permissions": flat_permissions
     }
 
-# Listar a todos los usuarios o los filtrados (Protegido con 'users_read')
+# Listar a todos los usuarios o filtrarlos (Protegido con 'users_read')
 @router.get("/", response_model=schemas.PaginatedResponse[schemas.UserList], dependencies=[Depends(PermissionChecker("users_read"))])
 def read_users(
     skip: int = 0, 
@@ -39,6 +39,9 @@ def read_users(
     role: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    """
+    Obtiene la lista de los Usuarios registrados. Se pueden especificar parámetros de filtrado con search (nombre o correo) y role
+    """
     # Se determina la consulta base
     query = db.query(models.User).filter(models.User.is_active == True)
 
@@ -55,41 +58,49 @@ def read_users(
                 models.User.full_name.ilike(search_filter)
             )
         )
-
-    # Se establece el total (antes de paginar)
-    total = query.count()
-
-    # Se aplica la paginación
-    users = query.offset(skip).limit(limit).all()
     
-    # Se arma el arreglo con los resultados
-    results = []
-    for user in users:
-        results.append({
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "is_active": user.is_active,
-            "roles": [role.name for role in user.roles],
-            "created_at": user.created_at
-        })
+    try:
+        # Se establece el total (antes de paginar)
+        total = query.count()
 
-    # Se retorna la respuesta paginada
-    return {
-        "total": total,
-        "page": (skip // limit) + 1,
-        "limit": limit,
-        "data": results
-    }
+        # Se aplica la paginación
+        users = query.offset(skip).limit(limit).all()
+        
+        # Se arma el arreglo con los resultados
+        results = []
+        for user in users:
+            results.append({
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "roles": [role.name for role in user.roles],
+                "created_at": user.created_at
+            })
 
+        # Se retorna la respuesta paginada
+        return {
+            "total": total,
+            "page": (skip // limit) + 1,
+            "limit": limit,
+            "data": results
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al obtener los Usuarios.")
+
+# Validar que el correo que se pretente registrar a un usuario no esté registrado (Protegido con 'users_read')
 @router.get("/validate-email-uniqueness", status_code=status.HTTP_200_OK, dependencies=[Depends(PermissionChecker("users_read"))])
 def check_email_uniqueness(
     email: str, 
-    user_id: Optional[UUID] = Query(None, description="ID del usuario excluido (para edición)"),
+    user_id: Optional[UUID] = Query(None, description="ID del Usuario excluido (para edición)"),
     db: Session = Depends(get_db)
 ):
-    """Verifica si un email ya existe en la base de datos."""
+    """
+    Verifica si un email ya existe en la base de datos antes de crear/modificar el registro.
+    """
     
+    # Se determina la consulta base
     query = db.query(models.User).filter(models.User.email == email)
     
     if user_id:
@@ -97,60 +108,81 @@ def check_email_uniqueness(
         query = query.filter(models.User.id != user_id)
         
     existing_user = query.first()
+
+    try:
+        if existing_user:
+            raise HTTPException(
+                status_code=409, 
+                detail="El correo electrónico ya se encuentra registrado."
+            )
+            
+        return {"message": "Email disponible."}
     
-    if existing_user:
-        raise HTTPException(
-            status_code=409, 
-            detail="El correo electrónico ya se encuentra registrado."
-        )
-        
-    return {"message": "Email disponible."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al validar el registro del correo del Uusario.")
 
 # Crear un usuario (Protegido con 'users_create')
 @router.post("/", response_model=schemas.UserProfile, dependencies=[Depends(PermissionChecker("users_create"))])
-def create_user(user_in: schemas.UserCreate, response: Response, db: Session = Depends(get_db)):
-    # Se validar si existe el email
+def create_user(
+    user_in: schemas.UserCreate, 
+    response: Response, 
+    db: Session = Depends(get_db)
+):
+    """
+    Método para dar de alta un nuevo Usuario.
+    """
+
+    # Se determina la consulta base
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
+    
+    # Se valida que el usuario exista.
     if user:
         raise HTTPException(
             status_code=409,
-            detail="El usuario con este email ya existe."
+            detail="Un Usuario con este email ya existe."
         )
     
     # Se validar si existe el rol
     role = db.query(models.Role).filter(models.Role.id == user_in.role_id).first()
     if not role:
-         raise HTTPException(status_code=404, detail="Rol no encontrado")
+         raise HTTPException(status_code=404, detail="Rol no encontrado.")
+    
+    try:
+        # Se establece la variable con los datos a guardar
+        new_user = models.User(
+            email=user_in.email,
+            hashed_password=get_password_hash(user_in.password),
+            full_name=user_in.full_name,
+            is_active=True
+        )
+        
+        # Se asigna el rol
+        new_user.roles.append(role)
+        
+        # Se hace el proceso de guardado
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-    # Se crea el usuario
-    new_user = models.User(
-        email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
-        full_name=user_in.full_name,
-        is_active=True
-    )
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Usuario registrado exitosamente."
+        
+        # Se calculan los permisos del nuevo usuario
+        flat_permissions = get_user_permissions(new_user)
+        
+        # Se construye la respuesta con los datos registrados
+        return {
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "is_active": new_user.is_active,
+            "roles": [role.name for role in new_user.roles],
+            "permissions": flat_permissions
+        }
     
-    # Se asigna el rol
-    new_user.roles.append(role)
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    response.headers["X-Process-Message"] = "Usuario registrado exitosamente."
-    
-    # Se calculan los permisos
-    flat_permissions = get_user_permissions(new_user)
-    
-    # Se construye la respuesta
-    return {
-        "id": new_user.id,
-        "email": new_user.email,
-        "full_name": new_user.full_name,
-        "is_active": new_user.is_active,
-        "roles": [role.name for role in new_user.roles],
-        "permissions": flat_permissions
-    }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al registrar el Usario.")
 
 # Actualizar un usuario (Protegido con 'users_update')
 @router.put("/{user_id}", response_model=schemas.UserProfile, dependencies=[Depends(PermissionChecker("users_update"))])
@@ -160,49 +192,63 @@ def update_user(
     response: Response,
     db: Session = Depends(get_db)
 ):
-    # Se busca al usuario
+    """
+    Método para actualizar un Usuario.
+    """
+
+    # Se determina la consulta base
     user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    # Se valida que el usuario exista
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    
+    try:
+        # Se realizan las actualizaciones de los campos generales
+        if user_in.full_name:
+            user.full_name = user_in.full_name
+        if user_in.email:
+            # Validar que el email no esté tomado por OTRO usuario
+            existing_email = db.query(models.User).filter(models.User.email == user_in.email).first()
+            if existing_email and existing_email.id != user_id:
+                raise HTTPException(status_code=409, detail="Este correo ya está en uso por otro usuario.")
+            user.email = user_in.email
 
-    # Se realizan las actualizaciones de los campos generales
-    if user_in.full_name:
-        user.full_name = user_in.full_name
-    if user_in.email:
-        # Validar que el email no esté tomado por OTRO usuario
-        existing_email = db.query(models.User).filter(models.User.email == user_in.email).first()
-        if existing_email and existing_email.id != user_id:
-             raise HTTPException(status_code=409, detail="Este correo ya está en uso por otro usuario.")
-        user.email = user_in.email
+        # Actualizar constraseña si se proporciona una
+        if user_in.password:
+            user.hashed_password = get_password_hash(user_in.password)
 
-    # Actualizar constraseña si se proporciona una
-    if user_in.password:
-        user.hashed_password = get_password_hash(user_in.password)
+        # Actualizar el rol si se proporciona uno
+        if user_in.role_id:
+            role = db.query(models.Role).filter(models.Role.id == user_in.role_id).first()
+            if not role:
+                raise HTTPException(status_code=404, detail="Rol no encontrado")
+            
+            # Se reemplaza la lista de roles (Asumiendo 1 rol principal)
+            user.roles = [role]
 
-    # Actualizar el rol si se proporciona uno
-    if user_in.role_id:
-        role = db.query(models.Role).filter(models.Role.id == user_in.role_id).first()
-        if not role:
-            raise HTTPException(status_code=404, detail="Rol no encontrado")
-        
-        # Se reemplaza la lista de roles (Asumiendo 1 rol principal)
-        user.roles = [role]
+        # Se confirma el proceso de actualización
+        db.commit()
+        db.refresh(user)
 
-    db.commit()
-    db.refresh(user)
+        # Se envía el encabezado de que todo salió bien
+        response.headers["X-Process-Message"] = "Datos del usuario actualizados"
 
-    response.headers["X-Process-Message"] = "Datos del usuario actualizados"
+        # Se construye la respuesta con los datos actualizados
+        from app.core.deps import get_user_permissions
+        return {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "roles": [role.name for role in user.roles],
+            "permissions": get_user_permissions(user)
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar el Usario.")
 
-    # Armado de la respuesta
-    from app.core.deps import get_user_permissions
-    return {
-        "id": user.id,
-        "email": user.email,
-        "full_name": user.full_name,
-        "is_active": user.is_active,
-        "roles": [role.name for role in user.roles],
-        "permissions": get_user_permissions(user)
-    }
 
 # Elimina un usuario (Protegido con 'users_delete')
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(PermissionChecker("users_delete"))])
@@ -212,8 +258,14 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user) # Se identifica al usuario que hace la petición
 ):
-    # Se busca al usuario
+    """
+    Método para deshabilitar un Usuario.
+    """
+
+    # Se determina la consulta base
     user = db.query(models.User).filter(models.User.id == user_id).first()
+    
+    # Se valida que el usuario exista
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
@@ -223,18 +275,22 @@ def delete_user(
 
     # Se valida que el usuario no sea Super Admin
     is_target_super_admin = any(role.name == "Super Admin" for role in user.roles)
-    
     if is_target_super_admin:
         raise HTTPException(
             status_code=400, 
-            detail="Por seguridad, no se permite eliminar usuarios con el rol Super Admin."
+            detail="Por seguridad, no se permite eliminar Usuarios con el rol Super Admin."
         )
 
-    # Se procede con la eliminación
-    user.is_active = False
-    db.add(user)
-    db.commit()
+    try:
+        # Se procede con la eliminación cambiando el estado del usuario
+        user.is_active = False
+        db.add(user)
+        db.commit()
 
-    response.headers["X-Process-Message"] = "Usuario eliminado correctamente"
+        response.headers["X-Process-Message"] = "Usuario eliminado correctamente"
+        
+        return None
     
-    return None
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar el Usario.")

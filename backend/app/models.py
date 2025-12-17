@@ -30,15 +30,15 @@ class Permission(Base):
     __tablename__ = "permissions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, unique=True, index=True) # Ej: "Crear Usuarios"
-    slug = Column(String, unique=True, index=True) # Ej: "users:create" (Para validación en código)
+    name = Column(String, unique=True, index=True) 
+    slug = Column(String, unique=True, index=True) 
     description = Column(String, nullable=True)
 
 class Role(Base):
     __tablename__ = "roles"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, unique=True, index=True) # Ej: "Administrador"
+    name = Column(String, unique=True, index=True)
     description = Column(String, nullable=True)
     
     # Relación: Los roles tienen permisos
@@ -53,17 +53,17 @@ class User(Base):
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     
-    # Auditoría automática
+    # Auditoría
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relación: Los usuarios tienen roles
     roles = relationship("Role", secondary=user_roles, backref="users")
 
-    # Relacipon: Los usuarios tienen activos
+    # Relación: Los usuarios tienen activos
     assigned_assets = relationship("Asset", back_populates="assigned_to")
 
-# Definición de los Estados Posibles de un Activo
+# Definición de los Estados posibles de un Activo
 class AssetStatus(str, enum.Enum):
     AVAILABLE = "Disponible"
     ASSIGNED = "Asignado"
@@ -74,13 +74,13 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False) # Ej: "MacBook Pro M1"
+    name = Column(String, nullable=False)
     description = Column(String, nullable=True)
-    internal_code = Column(String, unique=True, index=True, nullable=False) # Ej: "LUM-001"
+    internal_code = Column(String, unique=True, index=True, nullable=False)
     serial_number = Column(String, unique=True, index=True, nullable=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
     model = Column(String, nullable=True)
-    image_url = Column(String, nullable=True) # Para foto del activo
+    image_url = Column(String, nullable=True)
     cost = Column(Float, nullable=True)
     
     # Estado y Ciclo de Vida
@@ -91,17 +91,14 @@ class Asset(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Propiedad de navegación (para acceder a asset.category.name)
+    # Relación: Los activos tienen categoría
     category = relationship("Category", back_populates="assets")
-
-    # --- RELACIONES ---
     
-    # Relación: Un activo puede pertenecer a UN usuario (Muchos a Uno)
+    # Relación: Un activo puede pertenecer a un usuario
     assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
-    # Propiedad para acceder al objeto User desde el Asset (asset.assigned_to.full_name)
+    # Propiedad para acceder a los usuarios desde activos
     assigned_to = relationship("User", back_populates="assigned_assets") 
-    # Nota: 'backref="assets"' crea automáticamente 'user.assets' para ver qué tiene un usuario.
 
 class Category(Base):
     __tablename__ = "categories"
@@ -115,8 +112,8 @@ class Category(Base):
 
 # Enum para el tipo de movimiento
 class AssetActionType(str, enum.Enum):
-    ASSIGN = "Asignación"      # Check-out (Salida)
-    UNASSIGN = "Devolución"    # Check-in (Entrada)
+    ASSIGN = "Asignación"
+    UNASSIGN = "Devolución"
     MAINTENANCE = "Mantenimiento"
     RETIRED = "Baja"
 
@@ -125,17 +122,10 @@ class AssetHistory(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False)
-    
-    # ¿A quién se le dio o quién lo devolvió?
     assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    
-    # ¿Quién ejecutó la acción en el sistema?
     action_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
     action_type = Column(SqEnum(AssetActionType), nullable=False)
     comments = Column(String, nullable=True)
-    
-    # Fecha exacta del movimiento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones para poder mostrar nombres en el historial

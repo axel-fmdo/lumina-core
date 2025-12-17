@@ -9,7 +9,7 @@ import api from "../../lib/axios";
 import { Asset, AssetStatus } from "../../types";
 import { toast } from "sonner";
 
-// Esquema de Validación (Zod)
+// Esquema de datos de un Activo
 const assetSchema = z.object({
     name: z.string().min(1, "El nombre es requerido."),
     internal_code: z.string().min(1, "El código interno es requerido."),
@@ -18,9 +18,9 @@ const assetSchema = z.object({
     model: z.string().optional(),
     status: z.nativeEnum(AssetStatus),
     cost: z.number()
-       .or(z.nan()) // Permitimos que entre NaN (campo vacío)
-       .refine((val) => !Number.isNaN(val), { message: "Ingresa un monto válido" }) // Validamos nosotros en español
-       .refine((val) => val >= 0, { message: "El costo no puede ser negativo" }) // Validamos rango
+       .or(z.nan())
+       .refine((val) => !Number.isNaN(val), { message: "Ingresa un monto válido" })
+       .refine((val) => val >= 0, { message: "El costo no puede ser negativo" })
        .optional(),
     description: z.string().optional()
 });
@@ -29,8 +29,8 @@ type AssetFormData = z.infer<typeof assetSchema>;
 
 interface AssetModalProps {
   onClose: () => void;
-  onSuccess: () => void; // Para recargar la tabla al terminar
-  assetToEdit?: Asset | null; // Para editar un usuario existente
+  onSuccess: () => void;
+  assetToEdit?: Asset | null;
 }
 
 export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) => {
@@ -48,31 +48,27 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
         }
     });
 
-    // Función ara validación asíncrona onBlur
+    // Función para validación de datos asíncrona
     const checkUniqueness = async (field: 'internal_code' | 'serial_number', value: string | null | undefined) => {
-        // A. Si está vacío, limpiamos errores manuales y dejamos que Zod maneje el "Requerido"
         if (!value) return true; 
 
-        // B. Primero validamos el formato (Zod)
+        // Se valida que el formato sea correcto
         const isFormatValid = await trigger(field); 
-        if (!isFormatValid) return false; // Si Zod falla (ej. muy corto), no llamamos al backend
+        if (!isFormatValid) return false;
 
-        // C. Llamamos al Backend
+        // Se hace la llamada al backen
         try {
-            await api.get('/assets/validate-asset-uniqueness', {
-                params: { 
-                    value: value, 
-                    field: field, 
-                    asset_id: assetToEdit?.id // Excluir el actual si editamos
-                }
-            });
-            // Si tiene éxito, limpiamos cualquier error previo de unicidad
-            clearErrors(field); 
-            return true;
+            const response = await api.get('/assets/validate-asset-uniqueness', { params: { value: value, field: field, asset_id: assetToEdit?.id }});
+
+            if(response){
+                // Si tiene éxito se limpia el error
+                clearErrors(field); 
+                return true;
+            }
 
         } catch (error: any) {
             if (error.response?.status === 409) {
-                // D. INYECTAMOS EL ERROR VISUAL Y EL MENSAJE
+                // Se muestra el error en el campo
                 setError(field, { 
                     type: "manual", 
                     message: error.response.data.detail || `El valor ya está en uso.` 
@@ -91,9 +87,8 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
             if (!isMounted) return;
             setCategories(res.data);
 
-            // Solo reseteamos si estamos montados y abiertos
+            // Solo se resetea si se está montado y abierto
             if (assetToEdit) {
-                // Modo Edición: Llenar formulario
                 reset({
                 name: assetToEdit.name,
                 internal_code: assetToEdit.internal_code,
@@ -105,7 +100,6 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 description: assetToEdit.description || "",
                 });
             } else {
-                // Modo Creación: Limpiar
                 reset({
                 name: "",
                 internal_code: "",
@@ -129,11 +123,6 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 description: errors.cost.message || "Verifica el campo de costo" 
             });
         }
-        
-        // Opcional: Si quieres avisar de errores generales
-        // else {
-        //    toast.warning("Formulario incompleto", { description: "Por favor revisa los campos marcados en rojo" });
-        // }
     };
 
     const onSubmit = async (data: AssetFormData) => {
@@ -154,22 +143,20 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 const result = await api.put(`/assets/${assetToEdit.id}`, data);
 
                 if(result){
-                    onSuccess(); // Recargar tabla
-                    onClose();   // Cerrar modal
+                    onSuccess();
+                    onClose(); 
                 }
             } else {
                 const result = await api.post("/assets/", data);
 
                 if(result){
-                    onSuccess(); // Recargar tabla
-                    onClose();   // Cerrar modal
+                    onSuccess();
+                    onClose();
                 }
             }
         } catch (error: any) {
-            // Manejar errores de validación de unicidad que se colaron (409)
             const errorDetail = error.response?.data?.detail;
             if (error.response?.status === 409 && typeof errorDetail === 'string') {
-                // Ejemplo: El código 'LAP-001' ya está en uso.
                 if (errorDetail.includes('código')) {
                     setError('internal_code', { type: 'manual', message: errorDetail });
                 } else if (errorDetail.includes('serial')) {
@@ -204,7 +191,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                 transition={{ duration: 0.2, ease: easeInOut }}
                 className="relative w-full max-w-lg bg-lumina-surface border border-lumina-border/50 rounded-2xl shadow-2xl overflow-hidden"
             >
-                {/* Header */}
+                {/* CABECERA */}
                 <div className="px-6 py-4 border-b border-lumina-border/50 flex justify-between items-center bg-white/5">
                     <h3 className="text-lg font-semibold text-white">{isEditMode ? "Editar Activo" : "Nuevo Activo"}</h3>
                     <button type="button" onClick={handleClose} className="text-lumina-muted hover:text-white"><X className="w-5 h-5"/></button>
@@ -227,10 +214,10 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                     )}
                 </AnimatePresence>
 
-                {/* Form */}
+                {/* FORMULARIO */}
                 <form onSubmit={handleSubmit(onSubmit, onError)} className="p-6 space-y-4">
                     
-                    {/* Nombre y Código Interno */}
+                    {/* NOMBRE Y CÓDIGO INTERNO */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-lumina-muted">Nombre <span className="text-red-500">*</span></label>
@@ -262,7 +249,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                         </div>
                     </div>
 
-                    {/* Categoría y Estatus */}
+                    {/* CATEGORÍA Y ESTATUS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-lumina-muted">Categoría <span className="text-red-500">*</span></label>
@@ -298,11 +285,8 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                                 >
                                     {Object.values(AssetStatus)
                                         .filter(status => {
-                                            // 1. Siempre ocultar 'Asignado' de la lista de selección manual
-                                            // (A menos que sea el estado actual, para que se vea en el input desactivado)
                                             if (status === AssetStatus.ASSIGNED && assetToEdit?.status !== AssetStatus.ASSIGNED) return false;
 
-                                            // 2. En Modo Creación: Ocultar 'De Baja' (RETIRED)
                                             if (!isEditMode && status === AssetStatus.RETIRED) return false;
 
                                             return true;
@@ -317,7 +301,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                         </div>
                     </div>
 
-                    {/* Modelo, Serial y Costo */}
+                    {/* MODELOS, SERIAL Y COSTO */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-lumina-muted">Modelo</label>
@@ -363,7 +347,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                         </div>
                     </div>
 
-                    {/* Descripción */}
+                    {/* DESCRIPCIÓN */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-lumina-muted">Descripción / Notas</label>
                         <textarea 
@@ -379,7 +363,7 @@ export const AssetModal = ({ onClose, onSuccess, assetToEdit}: AssetModalProps) 
                         {errors.description && <p className="text-xs text-red-400">{errors.description.message}</p>}
                     </div>
 
-                    {/* Acciones */}
+                    {/* BOTONES */}
                     <div className="pt-4 flex justify-end gap-3">
                         <button type="button" onClick={handleClose} className="px-4 py-2 text-sm text-lumina-muted hover:text-white transition-colors">Cancelar</button>
                         <button 

@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
-// Definimos qué forma tiene una columna
+// Interfaz de definición de la estructura de una columna
 export interface Column<T> {
-  header: string;
-  accessorKey?: keyof T; // La llave del objeto (ej: "email")
-  render?: (item: T) => ReactNode; // Función opcional para renderizado custom (ej: badges)
+  header: string; // Título de la columna
+  accessorKey?: keyof T; // La llave del objeto
+  render?: (item: T) => ReactNode; // Función opcional para renderizado
   className?: string;
 }
 
@@ -36,7 +36,7 @@ export const Table = <T extends { id: string }>({ data, columns, isLoading }: Ta
     <div className="w-full overflow-hidden rounded-t-xl border border-b-0 border-lumina-border/50">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-lumina-text">
-          {/* HEADER */}
+          {/* CABECERA DE LA TABLA */}
           <thead className="bg-lumina-surface/80 uppercase text-xs font-semibold text-lumina-muted tracking-wider backdrop-blur-md">
             <tr>
               {columns.map((col, idx) => (
@@ -47,7 +47,7 @@ export const Table = <T extends { id: string }>({ data, columns, isLoading }: Ta
             </tr>
           </thead>
 
-          {/* BODY */}
+          {/* CUERPO DE LA TABLA */}
           <tbody className="divide-y divide-lumina-border/30 bg-lumina-bg/40 backdrop-blur-sm">
             {data.map((item) => (
               <tr 
@@ -56,7 +56,6 @@ export const Table = <T extends { id: string }>({ data, columns, isLoading }: Ta
               >
                 {columns.map((col, idx) => (
                   <td key={idx} className={cn("px-6 py-4 whitespace-nowrap", col.className)}>
-                    {/* Si hay funcion render, la usa. Si no, imprime el texto directo */}
                     {col.render 
                         ? col.render(item) 
                         : (col.accessorKey ? String(item[col.accessorKey]) : "")

@@ -3,33 +3,22 @@ import { usePermission } from "../../hooks/usePermission";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Settings, 
-  LogOut,
-  Box,
-  ChevronDown,
-  ChevronRight,
-  Shield,
-  Tags,
-  UserCog
-} from "lucide-react";
+import { LayoutDashboard, Users, Settings, LogOut, Box, ChevronDown, ChevronRight, Shield, Tags, UserCog } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { logout } from "../../redux/slices/authSlice";
 
 // Tipado para elementos del menú
 type MenuItem = {
-  icon: any;
-  label: string;
-  path?: string;
+  icon: any; // Ícono a mostrar en el Sidebar
+  label: string; // Texto del menú
+  path?: string; // Ruta para redirección
   permission?: string; // Permiso requerido para ver este item
-  permissions?: string[];
-  subItems?: { 
+  permissions?: string[]; // Permisos requeridos para ver el item
+  subItems?: { // Subitems en caso de que sea menú desplegable
     label: string; 
     path: string; 
     icon?: any;
-    permission?: string; // Permiso requerido para ver este subitem
+    permission?: string;
     permissions?: string[];
   }[];
 };
@@ -88,7 +77,7 @@ export const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Filtrar items del menú según permisos
+  // Función para filtrar los items del menú en función de los permisos del usuario
   const getFilteredMenuItems = () => {
     return MENU_ITEMS.filter(item => {
       // Si el item tiene subItems, filtrar los subItems primero
@@ -99,6 +88,7 @@ export const Sidebar = () => {
             return hasPermission(subItem.permission);
           }
 
+          // Si el subitem tiene permisos, validarlos
           if(subItem.permissions){
             return hasAllPermissions(subItem.permissions)
           }
@@ -121,6 +111,7 @@ export const Sidebar = () => {
         return hasPermission(item.permission);
       }
 
+      // Para items sin subitems, validar sus permisos
       if(item.permissions){
         return hasAllPermissions(item.permissions)
       }
@@ -142,6 +133,7 @@ export const Sidebar = () => {
     }
   }, [location.pathname, isExpanded]);
 
+  // Función para manejar el cierre de sesión
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
@@ -192,7 +184,7 @@ export const Sidebar = () => {
         {/* ITEMS DEL MENU */}
         <nav className="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto custom-scrollbar">
           {filteredMenuItems.map((item) => {
-            // CASO 1: ITEM CON SUBMENÚ
+            // MANEJO DE ITEM CON SUBMENÚ
             if (item.subItems) {
               const isOpen = openMenu === item.label;
               const isActiveParent = item.subItems.some(sub => sub.path === location.pathname);
@@ -254,7 +246,7 @@ export const Sidebar = () => {
               );
             }
 
-            // CASO 2: ITEM NORMAL
+            // MANEJO DE ITEM NORMAL
             return (
               <NavLink
                 key={item.path}

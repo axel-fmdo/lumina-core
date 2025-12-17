@@ -27,10 +27,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 // Componente Protector de un solo Permiso
-const PermissionRoute = ({ 
-  children, 
-  permission 
-}: { 
+const PermissionRoute = ({ children, permission }: { 
   children: JSX.Element; 
   permission: string;
 }) => {
@@ -44,10 +41,7 @@ const PermissionRoute = ({
 };
 
 // Componente protector de varios Permisos
-const PermissionsRoute = ({
-  children,
-  permissions
-}: {
+const PermissionsRoute = ({ children, permissions }: {
   children: JSX.Element;
   permissions: string[];
 }) => {

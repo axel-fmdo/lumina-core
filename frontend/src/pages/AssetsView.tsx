@@ -16,7 +16,7 @@ import { ReturnAssetModal } from "../components/assets/ReturnAssetModal";
 import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-// Helper para colores de estado (Badge)
+// Función para determinar el color de los status de un activo
 const getStatusColor = (status: AssetStatus) => {
     switch (status) {
       case AssetStatus.AVAILABLE: return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
@@ -27,7 +27,7 @@ const getStatusColor = (status: AssetStatus) => {
     }
 };
 
-// Helper para iconos según categoría
+// Función para determinar los íconos personalizados de un activo en función de su categoría
 const getCategoryIcon = (category: Category) => {
     if (category.name.includes("Móvil")) return <Smartphone className="w-4 h-4" />;
     if (category.name.includes("Monitor")) return <Monitor className="w-4 h-4" />;
@@ -37,7 +37,7 @@ const getCategoryIcon = (category: Category) => {
 export const AssetsView = () => {
     const { page, limit, search, category_id, status, setSearch, setCategory, setStatus, setPage, setLimit, resetFilters, apiParams } = useTableParams();
     const [assets, setAssets] = useState<Asset[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);  //Pendiente de endpoint
+    const [categories, setCategories] = useState<Category[]>([]);
     const [categoriesLoaded, setCategoriesLoaded] = useState(false);
     const [totalAssets, setTotalAssets] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -46,11 +46,11 @@ export const AssetsView = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [assetToEdit, setAssetToEdit] = useState<Asset | null>(null);
-    //Estados para la asignación de equipos
+    // Estados para la asignación de equipos
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedAssetForAction, setSelectedAssetForAction] = useState<Asset | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
-    //Estados para la desvinculación de equipos
+    // Estados para la desvinculación de equipos
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [assetToReturn, setAssetToReturn] = useState<Asset | null>(null);
     const [isReturnLoading, setIsReturnLoading] = useState(false);
@@ -60,14 +60,18 @@ export const AssetsView = () => {
     // Función para cargar datos
     const fetchAssets = async () => {
         try {
-        setLoading(true);
-        const { data } = await api.get("/assets/", { params: apiParams});
-        setAssets(data.data);
-        setTotalAssets(data.total);
+            setLoading(true);
+            const { data } = await api.get("/assets/", { params: apiParams});
+
+            if(data){
+                setAssets(data.data);
+                setTotalAssets(data.total);
+            }
+            
         } catch (error) {
-        console.error("Error cargando activos", error);
+            console.error("Error cargando activos: ", error);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     };
 
@@ -85,7 +89,7 @@ export const AssetsView = () => {
         fetchAssets();
     }, [apiParams.skip, apiParams.limit, apiParams.search, apiParams.category_id, apiParams.status]);
 
-    //Funciones para la lógica de asignación de equipos
+    // Funciones para la lógica de asignación de equipos
     const openAssignModal = (asset: Asset) => {
         setSelectedAssetForAction(asset);
         setIsAssignModalOpen(true);
@@ -96,11 +100,15 @@ export const AssetsView = () => {
 
         setIsActionLoading(true);
         try {
-            await api.post(`/assets/${selectedAssetForAction.id}/assign`, { user_id: userId, comments: comments });
-            toast.success("Activo asignado correctamente.");
-            setIsAssignModalOpen(false);
-            setSelectedAssetForAction(null);
-            fetchAssets(); // Recargar tabla para ver cambios
+            const response = await api.post(`/assets/${selectedAssetForAction.id}/assign`, { user_id: userId, comments: comments });
+
+            if(response){
+                toast.success("Activo asignado correctamente.");
+                setIsAssignModalOpen(false);
+                setSelectedAssetForAction(null);
+                fetchAssets();
+            }
+            
         } catch (error: any) {
             toast.error("Error al asignar", { description: error.response?.data?.detail });
         } finally {
@@ -108,7 +116,7 @@ export const AssetsView = () => {
         }
     };
 
-    //Funciones para la lógica de devolver equipos
+    // Funciones para la lógica de devolver equipos
     const handleRequestReturn = (asset: Asset) => {
         setAssetToReturn(asset);
         setIsReturnModalOpen(true);
@@ -119,11 +127,15 @@ export const AssetsView = () => {
 
         setIsReturnLoading(true);
         try {
-            await api.post(`/assets/${assetToReturn.id}/return`, { comments: comments });
-            toast.success(`Activo ${assetToReturn.internal_code} devuelto`);
-            fetchAssets();
-            setIsReturnModalOpen(false);
-            setAssetToReturn(null);
+            const response = await api.post(`/assets/${assetToReturn.id}/return`, { comments: comments });
+
+            if(response) {
+                toast.success(`Activo ${assetToReturn.internal_code} devuelto`);
+                fetchAssets();
+                setIsReturnModalOpen(false);
+                setAssetToReturn(null);
+            }
+            
         } catch (error: any) {
             toast.error("Error al devolver.", { description: error.response?.data?.detail });
         } finally {
@@ -131,7 +143,7 @@ export const AssetsView = () => {
         }
     };
 
-    //Función para ejecutr el borrado
+    // Función para ejecutar la eliminación de un activo
     const handleDeleteAsset = async () => {
         if(!assetToDelete) return;
 
@@ -151,12 +163,13 @@ export const AssetsView = () => {
         }
     };
 
+    // Función para cerrar modales
     const closeModals = () => {
         setIsCreateModalOpen(false);
         setAssetToEdit(null);
     };
 
-    // 6. Definición de Columnas
+    // Definición de las columnas de la tabla Activos
     const columns: Column<Asset>[] = [
         {
             header: "Código",
@@ -204,12 +217,12 @@ export const AssetsView = () => {
             header: "Asignado A",
             accessorKey: "assigned_to",
             render: (asset: Asset) => {
-                // Si no hay usuario asignado (null o undefined)
+                // Si no hay usuario asignado muestra una barra
                 if (!asset.assigned_to) {
                     return <span className="text-lumina-muted text-sm">-</span>;
                 }
 
-                // Si hay usuario, mostramos Avatar + Nombre
+                // Si hay usuario, se muestras Avatar + Nombre
                 return (
                     <div className="flex items-center gap-2">
                         {/* Avatar con inicial */}
@@ -229,7 +242,7 @@ export const AssetsView = () => {
             className: "text-right",
             render: (asset) => (
                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* BOTÓN HISTORIAL */}
+                    {/* BOTÓN PARA VER EL HISTORIAL */}
                     <button 
                         onClick={() => setAssetHistory(asset)}
                         className="p-1.5 text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-colors tooltip"
@@ -238,7 +251,7 @@ export const AssetsView = () => {
                         <Clock className="w-4 h-4" />
                     </button>
 
-                    {/* ASIGNAR (Solo si Available) */}
+                    {/* BOTÓN PARA ASIGNAR UN ACTIVO (SI ESTÁ DISPONIBLE) */}
                     {asset.status === AssetStatus.AVAILABLE && (
                         <button 
                             onClick={() => openAssignModal(asset)}
@@ -249,7 +262,7 @@ export const AssetsView = () => {
                         </button>
                     )}
 
-                    {/* DEVOLVER (Solo si Assigned) */}
+                    {/* BOTÓN PARA DEVOLVER UN ACTIVO (SOLO SI ESTÁ ASIGNADO) */}
                     {asset.status === AssetStatus.ASSIGNED && (
                         <button 
                              onClick={() => handleRequestReturn(asset)}
@@ -304,7 +317,7 @@ export const AssetsView = () => {
                     )}
                 </div>
     
-                {/* Barra de Herramientas */}
+                {/* BARRA CON BUSCADOR Y FILTROS */}
                 <DataToolbar
                     placeholder="Buscar activos por nombre, código o serie..."
                     searchTerm={search} 
@@ -342,10 +355,10 @@ export const AssetsView = () => {
                 </DataToolbar>
     
                 <div className="flex flex-col shadow-2xl rounded-xl">
-                    {/* Tabla */}
+                    {/* TABLA */}
                     <Table data={assets} columns={columns} isLoading={loading} />
     
-                    {/* 6. Paginador */}
+                    {/* PAGINADOR */}
                     <Pagination 
                         total={totalAssets}
                         page={page}
@@ -355,20 +368,20 @@ export const AssetsView = () => {
                     />
                 </div>
     
-                {/* Modal para crear un Activo */}
+                {/* MODAL PARA CREAR UN NUEVO ACTIVO */}
                 <AnimatePresence mode="wait">
                     {(isCreateModalOpen || !!assetToEdit) && (
                         <AssetModal
                             onClose={closeModals}
                             onSuccess={() => {
-                                fetchAssets(); // Recargar la tabla
+                                fetchAssets();
                             }}
                             assetToEdit={assetToEdit}
                         />
                     )}
                 </AnimatePresence>
 
-                {/* Modal para asingar el Activo a un Usuario */}
+                {/* MODAL PARA ASIGNAR EL ACTIVO A UN USUARIO */}
                 <AnimatePresence mode="wait">
                     {isAssignModalOpen && (
                         <UserSelectModal 
@@ -379,7 +392,7 @@ export const AssetsView = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Modal para devincular el Activo de un Usario */}
+                {/* MODAL PARA REGRESAR UN ACTIVO Y DESVINCULARLO DE UN USUARIO */}
                 <AnimatePresence mode="wait">
                     {isReturnModalOpen && assetToReturn && (
                         <ReturnAssetModal 
@@ -391,7 +404,7 @@ export const AssetsView = () => {
                     )}
                 </AnimatePresence>
 
-                {/* HISTORIAL */}
+                {/* MODAL PARA VER EL HISTORIAL DE MOVIMIENTOS DE UN ACTIVO */}
                 <AnimatePresence mode="wait">
                     {assetHistory && (
                         <AssetHistoryModal 
@@ -401,14 +414,14 @@ export const AssetsView = () => {
                     )}
                 </AnimatePresence>
     
-                {/* Modal para eliminar un usuario */}
+                {/* MODAL PARA DAR DE BAJA UN ACTIVO */}
                 <AnimatePresence mode="wait">
                     {!!assetToDelete && (
                         <ConfirmModal
                             onClose={() => setAssetToDelete(null)}
                             onConfirm={handleDeleteAsset}
                             title="Eliminar Activo"
-                            description={`¿Estás seguro de que deseas eliminar el activo "${assetToDelete?.internal_code} -${assetToDelete?.name}"? Esta acción no se puede deshacer.`}
+                            description={`¿Estás seguro de que deseas eliminar el Activo "${assetToDelete?.internal_code} -${assetToDelete?.name}"? Esta acción no se puede deshacer.`}
                             confirmText="Sí, dar de baja"
                             variant="danger"
                             isLoading={isDeleting}

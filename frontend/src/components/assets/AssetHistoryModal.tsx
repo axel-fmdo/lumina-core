@@ -48,7 +48,7 @@ export const AssetHistoryModal = ({ asset, onClose }: AssetHistoryModalProps) =>
                 transition={{ duration: 0.2, ease: easeInOut }}
                 className="relative w-full max-w-2xl bg-lumina-surface border border-lumina-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
             >
-                {/* Header */}
+                {/* CABECERA */}
                 <div className="p-4 border-b border-lumina-border bg-white/5 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
@@ -62,7 +62,7 @@ export const AssetHistoryModal = ({ asset, onClose }: AssetHistoryModalProps) =>
                     <button onClick={onClose} className="text-lumina-muted hover:text-white"><X className="w-5 h-5"/></button>
                 </div>
 
-                {/* Content */}
+                {/* MOVIMIENTOS DEL ACTIVO */}
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -78,7 +78,7 @@ export const AssetHistoryModal = ({ asset, onClose }: AssetHistoryModalProps) =>
                             {history.map((item) => (
                                 <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
                                     
-                                    {/* Icono Central */}
+                                    {/* ÍCONO CENTRAL */}
                                     <div className={`flex items-center justify-center w-10 h-10 rounded-full border shadow-lg shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-transform group-hover:scale-110 ${
                                          item.action_type === "Asignación" ? "bg-[#1a1c23] border-emerald-500/30 text-emerald-500" : 
                                          item.action_type === "Devolución" ? "bg-[#1a1c23] border-amber-500/30 text-amber-500" :
@@ -89,7 +89,7 @@ export const AssetHistoryModal = ({ asset, onClose }: AssetHistoryModalProps) =>
                                          <AlertCircle className="w-5 h-5" />}
                                     </div>
                                     
-                                    {/* Tarjeta de Datos */}
+                                    {/* TARJETA DE DATOS */}
                                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all shadow-sm hover:border-white/10 hover:shadow-md">
                                         <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
                                             <span className={`font-bold text-xs uppercase tracking-wider ${

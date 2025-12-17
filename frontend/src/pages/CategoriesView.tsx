@@ -25,11 +25,15 @@ export const CategoriesView = () => {
     // Función para cargar datos
     const fetchCategories = async () => {
         try {
-        setLoading(true);
-        const { data } = await api.get("/categories/", { params: apiParams});
-            setCategories(data.data);
-            setTotalCategories(data.total);
-            } catch (error) {
+            setLoading(true);
+            const { data } = await api.get("/categories/", { params: apiParams});
+
+            if(data){
+                setCategories(data.data);
+                setTotalCategories(data.total);
+            }
+            
+        } catch (error) {
             console.error("Error cargando categorías", error);
         } finally {
             setLoading(false);
@@ -40,15 +44,19 @@ export const CategoriesView = () => {
         fetchCategories();
     }, [apiParams.skip, apiParams.limit, apiParams.search]);
 
-    //Función para ejecutr el borrado
+    // Función para ejecutr el borrado
     const handleDeleteCategory = async () => {
         if(!categoryToDelete) return;
 
         try{
             setIsDeleting(true);
-            await api.delete(`/categories/${categoryToDelete.id}`);
-            setCategoryToDelete(null);
-            fetchCategories(); // Recargar la lista
+            const response = await api.delete(`/categories/${categoryToDelete.id}`);
+
+            if(response){
+                setCategoryToDelete(null);
+                fetchCategories();
+            }
+            
         } catch (error) {
             console.error("Error al eliminar la categoría: ", error);
         } finally {
@@ -61,7 +69,7 @@ export const CategoriesView = () => {
         setCategoryToEdit(null);
     }
 
-    // Definición de columnas para la tabla
+    // Definición de columnas para la tabla Categorías
     const columns: Column<Category>[] = [
         { 
             header: "Nombre", 
@@ -124,7 +132,7 @@ export const CategoriesView = () => {
                 )}
             </div>
 
-            {/* Barra de Herramientas */}
+            {/* BARRA CON BUSCADOR */}
             <DataToolbar
                 placeholder="Buscar categoría..."
                 searchTerm={search} 
@@ -134,10 +142,10 @@ export const CategoriesView = () => {
             </DataToolbar>
 
             <div className="flex flex-col shadow-2xl rounded-xl">
-                {/* Tabla */}
+                {/* TABLA */}
                 <Table data={categories} columns={columns} isLoading={loading} />
 
-                {/* 6. Paginador */}
+                {/* PAGINADOR */}
                 <Pagination 
                     total={totalCategories}
                     page={page}
@@ -147,27 +155,27 @@ export const CategoriesView = () => {
                 />
             </div>
 
-            {/* Modal para crear un usuario */}
+            {/* MODAL PARA CREAR UNA CATEGORÍA */}
             {<AnimatePresence mode="wait">
                 {(isCreateModalOpen || !!categoryToEdit) && (
                     <CategoryModal
                         onClose={closeModals}
                         onSuccess={() => {
-                            fetchCategories(); // Recargar la tabla
+                            fetchCategories();
                         }}
                         categoryToEdit={categoryToEdit}
                     />
                 )}
             </AnimatePresence>}
 
-            {/* Modal para eliminar un usuario */}
+            {/* MODAL PARA ELIMINAR UNA CATEGORÍA */}
             <AnimatePresence mode="wait">
                 {(!!categoryToDelete) && (
                     <ConfirmModal
                         onClose={() => setCategoryToDelete(null)}
                         onConfirm={handleDeleteCategory}
                         title="Eliminar Categoría"
-                        description={`¿Estás seguro de que deseas eliminar la categoría "${categoryToDelete?.name}"? Esta acción no se puede deshacer.`}
+                        description={`¿Estás seguro de que deseas eliminar la Categoría "${categoryToDelete?.name}"? Esta acción no se puede deshacer.`}
                         confirmText="Sí, eliminar"
                         variant="danger"
                         isLoading={isDeleting}

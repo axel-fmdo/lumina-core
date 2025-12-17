@@ -5,7 +5,7 @@ import { useDebounce } from "./useDebounce";
 export const useTableParams = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Leer valores de la URL o usar defaults
+  // Parámetros que serán usados para la búsqueda y filtrado de datos globales en los modelos
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "10");
   const search = searchParams.get("search") || "";
@@ -13,12 +13,12 @@ export const useTableParams = () => {
   const category_id = searchParams.get("category_id") || "";
   const status = searchParams.get("status") || "";
   
-  // Estado local para el input de búsqueda (para no actualizar URL en cada tecla)
+  // Estado local para el input de búsqueda
   const [searchTerm, setSearchTerm] = useState(search);
   
   const debouncedSearch = useDebounce(searchTerm, 500);
 
-  // Sincronizar Búsqueda con URL
+  // Efecto de sincronización de la URL con los parámetros de búsqueda
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     if (debouncedSearch) {
@@ -26,7 +26,7 @@ export const useTableParams = () => {
     } else {
       params.delete("search");
     }
-    // Al buscar, siempre reseteamos a página 1
+    // Al buscar, siempre se muestra la primera página
     if (debouncedSearch !== search) {
         params.set("page", "1");
     }

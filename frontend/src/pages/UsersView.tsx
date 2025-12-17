@@ -28,14 +28,17 @@ export const UsersView = () => {
     // Función para cargar datos
     const fetchUsers = async () => {
         try {
-        setLoading(true);
-        const { data } = await api.get("/users/", { params: apiParams});
-        setUsers(data.data);
-        setTotalUsers(data.total);
+            setLoading(true);
+            const { data } = await api.get("/users/", { params: apiParams});
+
+            if(data){
+                setUsers(data.data);
+                setTotalUsers(data.total);
+            }
         } catch (error) {
-        console.error("Error cargando usuarios", error);
+            console.error("Error cargando usuarios", error);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     };
 
@@ -53,7 +56,7 @@ export const UsersView = () => {
         fetchUsers();
     }, [apiParams.skip, apiParams.limit, apiParams.search, apiParams.role]);
 
-    //Función para ejecutr el borrado
+    // Función para ejecutr el borrado
     const handleDeleteUser = async () => {
         if(!userToDelete) return;
 
@@ -72,12 +75,13 @@ export const UsersView = () => {
         }
     };
 
+    // Función para el cierre de modales
     const closeModals = () => {
         setIsCreateModalOpen(false);
         setUserToEdit(null);
     }
 
-    // Definición de columnas para la tabla
+    // Definición de columnas para la tabla de Usarios
     const columns: Column<User>[] = [
         { 
             header: "Nombre", 
@@ -161,7 +165,7 @@ export const UsersView = () => {
                 )}
             </div>
 
-            {/* Barra de Herramientas */}
+            {/* BARRA CON BUSCADOR Y FILTROS */}
             <DataToolbar
                 placeholder="Buscar usuarios por nombre o correo..."
                 searchTerm={search} 
@@ -186,10 +190,10 @@ export const UsersView = () => {
             </DataToolbar>
 
             <div className="flex flex-col shadow-2xl rounded-xl">
-                {/* Tabla */}
+                {/* TABLA */}
                 <Table data={users} columns={columns} isLoading={loading} />
 
-                {/* 6. Paginador */}
+                {/* PAGINADOR */}
                 <Pagination 
                     total={totalUsers}
                     page={page}
@@ -199,20 +203,20 @@ export const UsersView = () => {
                 />
             </div>
 
-            {/* Modal para crear un usuario */}
+            {/* MODAL PARA CREAR UN NUEVO USUARIO */}
             <AnimatePresence mode="wait">
                 {(isCreateModalOpen || !!userToEdit) && (
                     <UserModal
                         onClose={closeModals}
                         onSuccess={() => {
-                            fetchUsers(); // Recargar la tabla
+                            fetchUsers();
                         }}
                         userToEdit={userToEdit}
                     />
                 )}
             </AnimatePresence>
 
-            {/* Modal para eliminar un usuario */}
+            {/* MODAL PARA ELIMINAR UN USUARIO */}
             <AnimatePresence mode="wait">
                 {(!!userToDelete) && (
                     <ConfirmModal

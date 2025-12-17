@@ -33,6 +33,12 @@ class RoleBase(BaseModel):
     name: str
     description: Optional[str] = None
 
+class RoleDropdown(RoleBase):
+    id: UUID
+
+    class Config:
+        from_attributes = True
+
 class RoleCreate(RoleBase):
     pass
 
@@ -41,12 +47,10 @@ class RoleUpdate(RoleBase):
     description: Optional[str] = None
 
 class RolePermissionsUpdate(BaseModel):
-    # Recibimos una lista de slugs (ej: ["users:read", "assets:create"])
     permissions: List[str]
 
 class RoleResponse(RoleBase):
     id: UUID
-    # Incluimos los permisos aquí para que cuando selecciones el perfil el front sepa cuáles switches prender.
     permissions: List[PermissionResponse] = [] 
 
     class Config:
@@ -86,7 +90,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     role_id: Optional[UUID] = None
 
-# Modelo de usuario simple para respuestas anidadas y el historial
+# Esquema de usuario simple para respuestas anidadas y el historial
 class UserSimple(BaseModel):
     id: UUID
     full_name: str
@@ -100,6 +104,12 @@ class UserSimple(BaseModel):
 
 class CategoryBase(BaseModel):
     name: str
+
+class CategoryDropdown(RoleBase):
+    id: UUID
+
+    class Config:
+        from_attributes = True
 
 class CategoryCreate(CategoryBase):
     pass
@@ -122,13 +132,12 @@ class AssetStatusEnum(str, Enum):
     MAINTENANCE = "En Mantenimiento"
     RETIRED = "De Baja"
 
-# Modelo base (Input general)
+# Esquema base (Input general)
 class AssetBase(BaseModel):
     name: str
     internal_code: str
     serial_number: Optional[str] = None
     
-    # Aquí SÍ usamos category_id (UUID) porque es lo que enviamos al crear
     category_id: UUID 
     
     model: Optional[str] = None
@@ -177,13 +186,11 @@ class AssetResponse(BaseModel):
 
 class AssetHistoryResponse(BaseModel):
     id: UUID
-    action_type: str  # "Asignación", "Devolución", etc.
+    action_type: str
     comments: Optional[str] = None
     created_at: datetime
     
-    # Quién recibió el equipo
     assigned_to: Optional[UserSimple] = None
-    # Quién registró el movimiento (Admin)
     action_by: Optional[UserSimple] = None
 
     class Config:

@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
-// Creamos una instancia base
+// Generación de la instancia base
 const api = axios.create({
-  //baseURL: 'http://localhost:8000', // URL de tu backend
-  baseURL: 'http://192.168.0.188:8000', 
+  baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,15 +18,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor de Response (Manejo de Mensajes) ---
+// Interceptor de Response (Manejo de Mensajes)
 api.interceptors.response.use(
     (response) => {
-        // Se busca el header personalizado (Axios los pone en minúsculas)
+        // Se busca el header personalizado
         const successMessage = response.headers['x-process-message'];
         
-        // Si existe, lanzamos Toast de Éxito
+        // Si existe, se muestra mensaje de éxito
         if (successMessage) {
-            // Decodificamos por si vienen caracteres especiales (acentos)
+            // Se decodifica en caso de que lleguen caracteres especiales
             try {
                 toast.success(decodeURIComponent(escape(successMessage)));
             } catch (e) {
@@ -61,7 +60,6 @@ api.interceptors.response.use(
             toast.error("Error de Servidor", { description: "Consulta con el administrador." });
         } else {
             // Errores de validación (400, 404, 422)
-            // Si es un array de errores (Pydantic a veces), lo formateamos
             if (Array.isArray(errorMessage)) {
                 toast.error("Error de Validación", { description: errorMessage[0].msg });
             } else {

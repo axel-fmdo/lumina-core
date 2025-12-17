@@ -10,7 +10,7 @@ export const MainLayout = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useSelector((state: RootState) => state.auth);
 
-  // Si hay token pero no hay usuario cargado, sw busca
+  // Si hay token pero no hay usuario cargado, se busca
   useEffect(() => {
     if (token && !user) {
       dispatch(fetchUserProfile());
