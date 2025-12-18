@@ -1,12 +1,9 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-
-# Se lee la URL de conexión desde las variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL")
+from app.config import settings
 
 # Se crea el motor de conexión
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
 
 # Se crea la fábrica de sesiones
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

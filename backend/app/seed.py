@@ -4,7 +4,7 @@ from app import models
 from app.core.security import get_password_hash
 from app.models import AssetStatus
 
-# 1. LISTA MAESTRA DE PERMISOS
+# LISTA MAESTRA DE PERMISOS
 SYSTEM_PERMISSIONS = [
     # --- USUARIOS ---
     {"name": "Ver Usuarios", "slug": "users_read", "description": "Acceso de lectura al módulo de usuarios"},
@@ -38,7 +38,7 @@ SYSTEM_PERMISSIONS = [
     {"name": "Ver Configuración", "slug": "settings_read", "description": "Acceso al módulo de configuración"},
 ]
 
-# 2. CONFIGURACIÓN DE ROLES
+# CONFIGURACIÓN DE ROLES
 ROLES_CONFIG = [
     {
         "name": "Super Admin",
@@ -71,7 +71,7 @@ ROLES_CONFIG = [
     }
 ]
 
-# 3. LISTA DE CATEGORÍAS DEMO
+# LISTA DE CATEGORÍAS DEMO
 DEMO_CATEGORIES = [
     "Cómputo",
     "Periféricos",
@@ -80,7 +80,7 @@ DEMO_CATEGORIES = [
     "Redes"
 ]
 
-# 4. USUARIOS DEMO INICIALES
+# USUARIOS DEMO INICIALES
 DEMO_USERS = [
     {
         "email": "admin@lumina.com",
@@ -102,7 +102,7 @@ DEMO_USERS = [
     }
 ]
 
-# 5. ACTIVOS DEMO
+# ACTIVOS DEMO
 DEMO_ASSETS = [
     {
         "name": "MacBook Pro M3",
@@ -147,7 +147,7 @@ def seed_db():
     try:
         print("Iniciando sembrado de base de datos...")
 
-        # --- A. CREAR PERMISOS ---
+        # --- CREAR PERMISOS ---
         print("   > Gestionando Permisos...")
         all_permissions_map = {} 
         for perm_data in SYSTEM_PERMISSIONS:
@@ -159,7 +159,7 @@ def seed_db():
             all_permissions_map[perm_data["slug"]] = perm
         db.commit()
 
-        # --- B. CREAR ROLES ---
+        # --- CREAR ROLES ---
         print("   > Gestionando Roles...")
         for role_conf in ROLES_CONFIG:
             role = db.query(models.Role).filter_by(name=role_conf["name"]).first()
@@ -177,7 +177,7 @@ def seed_db():
                         role.permissions.append(all_permissions_map[slug])
             db.commit()
 
-        # --- C. CREAR CATEGORÍAS ---
+        # --- CREAR CATEGORÍAS ---
         print("   > Gestionando Categorías...")
         categories_map = {} 
         for cat_name in DEMO_CATEGORIES:
@@ -190,7 +190,7 @@ def seed_db():
                 print(f"     + Categoría creada: {cat_name}")
             categories_map[cat_name] = cat 
 
-        # --- D. CREAR USUARIOS ---
+        # --- CREAR USUARIOS ---
         print("   > Gestionando Usuarios...")
         for user_data in DEMO_USERS:
             user = db.query(models.User).filter_by(email=user_data["email"]).first()
@@ -211,7 +211,7 @@ def seed_db():
                 db.commit()
                 print(f"     + Usuario creado: {user_data['email']}")
 
-        # --- E. CREAR ACTIVOS ---
+        # --- CREAR ACTIVOS ---
         print("   > Gestionando Activos...")
         for asset_data in DEMO_ASSETS:
             asset = db.query(models.Asset).filter_by(internal_code=asset_data["internal_code"]).first()

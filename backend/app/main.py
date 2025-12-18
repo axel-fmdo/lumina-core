@@ -1,3 +1,4 @@
+from app.config import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
@@ -10,8 +11,7 @@ app = FastAPI(title="Lumina Asset Manager API")
 
 # Configuración de CORS
 origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
+    settings.FRONTEND_URL
 ]
 
 app.add_middleware(

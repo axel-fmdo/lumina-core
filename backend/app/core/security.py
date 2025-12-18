@@ -1,12 +1,13 @@
+from app.config import settings
 from datetime import datetime, timedelta
 from typing import Optional
 from passlib.context import CryptContext
 from jose import jwt
 
 # CONFIGURACIÓN (En producción esto va en variables de entorno .env)
-SECRET_KEY = "lumina-super-secret-key-change-me-in-prod"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 300 # 5 horas para desarrollo
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
